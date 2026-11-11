@@ -3,7 +3,8 @@
 
 Source: FrequencyWords by Hermit Dave (OpenSubtitles 2018), CC BY-SA 4.0, pinned to one
 commit so the tables can be rebuilt byte for byte. Output lines are "<keys> <per billion>":
-- english.txt: lowercase words that contain a Telex trigger, the only ones Telex can change.
+- english.txt: every lowercase a-z word. Marks apply anywhere in a word ("element" has e...e),
+  so any word can collide with Telex and the table doubles as the English word list.
 - vietnamese.txt: syllables with a diacritic, keyed by their Telex keys with the tone key
   last, so "hòa" and "hoà" count as one entry.
 Usage: Tools/make-frequency-tables.py
@@ -17,7 +18,6 @@ from pathlib import Path
 COMMIT = "525f9b560de45753a5ea01069454e72e9aa541c6"
 URL = "https://raw.githubusercontent.com/hermitdave/FrequencyWords/{}/content/2018/{}/{}_50k.txt"
 OUTPUT = Path(__file__).resolve().parent.parent / "Core/Sources/VietKeyCore/Frequency/Data"
-TELEX_TRIGGER = re.compile(r"[sfrxjwz]|aa|ee|oo|dd")
 TONES = {"́": "s", "̀": "f", "̉": "r", "̃": "x", "̣": "j"}
 
 
@@ -55,7 +55,7 @@ def write(name, table):
 
 def main():
     english = {word: count for word, count in download("en")
-               if re.fullmatch(r"[a-z]+", word) and TELEX_TRIGGER.search(word)}
+               if re.fullmatch(r"[a-z]+", word)}
     vietnamese = defaultdict(int)
     for word, count in download("vi"):
         keys = telex_keys(word)

@@ -13,15 +13,14 @@ struct RevertTracker: Sendable {
         offered = revert
     }
 
-    /// Call first for every key. Returns the revert to hand over when the key is Backspace.
-    mutating func take(for key: InputKey, learningInto corrections: any CorrectionStore) -> Revertible? {
-        if let applied, key != .backspace {
-            corrections.record(.vietnamese, for: applied.keys)
-        }
+    /// Call first for every key. `handOver` is the revert to give the adapter when the key is
+    /// Backspace; `kept` is an applied revert this key confirmed as the user's choice.
+    mutating func take(for key: InputKey) -> (handOver: Revertible?, kept: Revertible?) {
+        let kept = key == .backspace ? nil : applied
         handedOver = key == .backspace ? offered : nil
         offered = nil
         applied = nil
-        return handedOver
+        return (handedOver, kept)
     }
 
     mutating func confirm() {

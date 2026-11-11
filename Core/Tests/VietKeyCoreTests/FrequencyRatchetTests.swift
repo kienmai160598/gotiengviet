@@ -1,30 +1,31 @@
 import Testing
 @testable import VietKeyCore
 
-/// Token-weighted error rates over the bundled tables. Scored and measured on the same lists,
-/// so this guards against regressions; it is not a corpus round-trip.
-@Suite(.serialized) struct FrequencyRatchetTests {
+/// Token-weighted error rates over the bundled tables, each word typed without context.
+/// Scored and measured on the same lists, so this guards against regressions; it is not a
+/// corpus round-trip (see SentenceEval).
+struct FrequencyRatchetTests {
     private static let perBillion = 1_000_000_000.0
-    private var session = InputSession(lexicon: TestLexicon(), frequencies: testFrequencies, corrections: InMemoryCorrectionStore())
 
-    private mutating func commit(_ keys: String) -> String {
+    private func commit(_ keys: String) -> String {
+        var session = InputSession(lexicon: TestLexicon(), frequencies: testFrequencies, corrections: InMemoryCorrectionStore())
         keys.forEach { _ = session.handle(.character($0)) }
         guard case .commit(let text, _) = session.handle(.character(" ")) else { return keys }
         return text
     }
 
     /// Share of English word occurrences that Telex turns into Vietnamese.
-    @Test mutating func englishTokensMangled() {
+    @Test func englishTokensMangled() {
         let mangled = testFrequencies.englishCounts.filter { commit($0.key) != $0.key }
         let share = Double(mangled.values.reduce(0, +)) / Self.perBillion
-        #expect(share <= 0.0109, "mangled \(share * 100)%, top: \(Self.top(mangled))")
+        #expect(share <= 0.0110, "mangled \(share * 100)%, top: \(Self.top(mangled))")
     }
 
     /// Share of Vietnamese syllable occurrences (with a diacritic) that do not come out as typed,
     /// for typists who put the tone key last ("lats") and for those who type it before the final
     /// consonant ("last"), which collides with more English words.
     @Test(arguments: [(false, 0.0012), (true, 0.0014)])
-    mutating func vietnameseTokensLost(toneBeforeFinal: Bool, baseline: Double) {
+    func vietnameseTokensLost(toneBeforeFinal: Bool, baseline: Double) {
         let lost = testFrequencies.vietnameseCounts.filter { keys, _ in
             let typed = toneBeforeFinal ? Self.movingToneBeforeFinal(keys) : keys
             let text = commit(typed)

@@ -5,13 +5,29 @@ is built for iOS/iPadOS from day one.
 
 Status: each word is decided at the word boundary. A word stays Vietnamese when it is a valid
 syllable, unless the keys are an English word more than 3x as common (word frequency tables).
+After a run of English words the bar drops to 1/33x, so "I bought a new car" keeps car. A run
+needs 2 common English words in a row (rare ones like ko, dc and words valid in both languages
+like the, anh do not count), so "Team bên em" and "Ok, cả nhà" stay Vietnamese but "Unit test
+cả" gives car (chosen over a longer run so English right after Vietnamese works). Esc counts as English; a kept
+Backspace revert counts as Vietnamese. Context is never reset (not on Return either).
 While typing, the Vietnamese reading is shown as long as it is still possible.
-Measured on the bundled frequency lists (token-weighted, same data used for scoring, so a
-regression guard rather than a corpus test): English mangled 1.1% (was 8.5% with rules only),
-Vietnamese lost 0.12% with the tone key typed last, 0.13% with it typed before the final
-consonant (0.08% of either is slang/typos the syllable rules reject). The ≤1% English target is
-not met at any weight: car→cả, six→sĩ, these→thế, there→thể, been→bên need the previous word
-as context. Mac: tables load verified (26ms at launch); typing not yet checked by hand.
+Mac: tables load verified; the context rule is Core-tested only, not typed by hand yet.
+
+Word error rate on Tatoeba running text (tone key typed last, test word list instead of the
+system spell checker; eval data not in the repo; factors were picked on this same data):
+
+| Text | No context | With context |
+|---|---|---|
+| Vietnamese, 33k sentences | 0.139% | 0.139% |
+| English, 34k sentences, each typed fresh | 1.10% | 0.50% |
+| English, each right after a Vietnamese sentence | 1.10% | 0.50% |
+| English, typed as one document | 1.10% | 0.15% |
+
+Untuned: the 20-per-million evidence threshold and the 1/100 factor were set by hand.
+Known misses: an English sentence opening "There"/"These" with no English run before gets
+thể/thế; two English words in a row turn the next colliding word English ("Unit test cả" gives
+car); tô (typed `too`) becomes "too". Separate bug: the double-key undo drops a letter in words with a repeated vowel
+that are not in the word lists (Canada→Canda, Baya→Bây).
 
 ## Learning from corrections
 
@@ -38,6 +54,8 @@ menu in the menu bar: VietKey > Forget Learned Corrections.
 cd Core && swift test                                                     # Core tests
 xcodebuild -scheme VietKeyCore -destination 'generic/platform=iOS' build  # Core builds for iOS (run in Core/)
 Tools/install-mac.sh                                                      # build + install the Mac input method
+# Tatoeba eval: put vie.tsv and eng.tsv from downloads.tatoeba.org/exports/per_language in a folder
+cd Core && VIETKEY_TATOEBA_DIR=/path swift test -c release -Xswiftc -enable-testing --filter SentenceEval
 ```
 
 Word frequency tables (`Core/Sources/VietKeyCore/Frequency/Data`) come from FrequencyWords

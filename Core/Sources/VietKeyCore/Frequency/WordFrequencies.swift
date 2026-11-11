@@ -40,14 +40,16 @@ public final class BundledWordFrequencies: WordFrequencies {
 }
 
 extension WordFrequencies {
-    /// Vietnamese wins unless the keys, as an English word, are more than this many times as
-    /// common. Chosen from the token-weighted sweep (FrequencyRatchetTests): x1 mangles 0.8% of
-    /// English and loses 0.16% of Vietnamese to scoring; x3 gives 1.1% and 0.04%.
-    static var vietnameseWeight: Int { 3 }
+    /// With no English just before, Vietnamese wins unless the keys, as an English word, are
+    /// more than this many times as common. Chosen from the token-weighted sweep
+    /// (FrequencyRatchetTests): x1 mangles 0.8% of English and loses 0.16% of Vietnamese to
+    /// scoring; x3 gives 1.1% and 0.04%.
+    static var vietnameseWeight: Double { 3 }
 
-    func prefersVietnamese(_ composition: Composition) -> Bool {
+    func prefersVietnamese(_ composition: Composition, after context: LanguageContext) -> Bool {
         let english = english(composition.raw.lowercased())
         guard english > 0 else { return true }
-        return vietnamese(telexKeys: composition.telexKeys) * Self.vietnameseWeight >= english
+        let vietnamese = Double(vietnamese(telexKeys: composition.telexKeys))
+        return vietnamese * Self.vietnameseWeight * context.vietnameseFactor >= Double(english)
     }
 }

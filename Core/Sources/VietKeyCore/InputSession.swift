@@ -7,6 +7,7 @@ public struct InputSession: Sendable {
     private let frequencies: any WordFrequencies
     private let corrections: any CorrectionStore
     private var reverts = RevertTracker()
+    private var context = LanguageContext()
 
     public init(
         style: ToneStyle = .traditional,
@@ -25,7 +26,11 @@ public struct InputSession: Sendable {
     public var isComposing: Bool { !composition.isEmpty }
 
     public mutating func handle(_ key: InputKey) -> CompositionUpdate {
-        let revert = reverts.take(for: key, learningInto: corrections)
+        let (revert, keptRevert) = reverts.take(for: key)
+        if let keptRevert {
+            corrections.record(.vietnamese, for: keptRevert.keys)
+            context.userChoseVietnamese()
+        }
         switch key {
         case .character(let char) where char.isASCII && char.isLetter:
             composition.type(char)
@@ -44,6 +49,7 @@ public struct InputSession: Sendable {
             if resolve(composition, isFinal: false) != raw {
                 corrections.record(.typedKeys, for: raw)
             }
+            context.userChoseTypedKeys()
             reset()
             return .commit(text: raw, raw: raw)
         }
@@ -72,6 +78,7 @@ public struct InputSession: Sendable {
         if let boundary, wasShowingVietnamese, text == raw {
             reverts.offer(Revertible(keys: raw, inserted: text + String(boundary), shown: composition.spelledText))
         }
+        context.record(committed: text, from: composition, englishFrequency: frequencies.english(raw.lowercased()))
         reset()
         return .commit(text: text, raw: raw)
     }
@@ -96,7 +103,7 @@ public struct InputSession: Sendable {
         }
         if composition.isLiteral { return isEnglishWord(raw) ? raw : display }
         let isVietnamese = isFinal
-            ? composition.isValidVietnamese && frequencies.prefersVietnamese(composition)
+            ? composition.isValidVietnamese && frequencies.prefersVietnamese(composition, after: context)
             : composition.canBecomeVietnamese
         return isVietnamese ? display : raw
     }
