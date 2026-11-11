@@ -26,16 +26,13 @@ final class VietKeyInputController: IMKInputController {
         ) {
             switch action {
             case .session(let key):
-                let consumed = render(session.handle(key), to: client, consumesKey: key == .escape)
-                let typed: Character? = if case .character(let char) = key, !consumed { char } else { nil }
-                noteKeyReachedDocument(typed, client: client)
-                return consumed
+                return render(session.handle(key), to: client, consumesKey: key == .escape)
             case .commitThenPassthrough:
                 render(session.commit(), to: client, consumesKey: false)
-                noteKeyReachedDocument(event.characters?.first.flatMap { $0.isNewline ? $0 : nil }, client: client)
                 return false
             }
         }
+        notePressedKey()
         Trace.log("  consumed=\(consumed) marked=\(client.markedRange()) selected=\(client.selectedRange())")
         return consumed
     }
@@ -73,10 +70,10 @@ final class VietKeyInputController: IMKInputController {
 
     /// IMKit calls every controller method on the main thread, but its headers do not say so;
     /// these two hand that knowledge to the compiler.
-    private func noteKeyReachedDocument(_ char: Character?, client: IMKTextInput) {
-        nonisolated(unsafe) let (controller, client) = (self, client)
+    private func notePressedKey() {
+        nonisolated(unsafe) let controller = self
         let grammar = grammar
-        MainActor.assumeIsolated { grammar.keyReachedDocument(char, client: client, controller: controller) }
+        MainActor.assumeIsolated { grammar.keyPressed(controller: controller) }
     }
 
     private func dismissGrammar() {

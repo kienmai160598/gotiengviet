@@ -21,9 +21,16 @@ import VietKeyCore
         #expect(SentenceFinder.lastSentence(in: "to school every day.", reachesDocumentStart: false) == nil)
     }
 
-    @Test func needsWordsBeforeTheTerminator() {
+    @Test func takesAnUnfinishedSentenceWithoutTrailingWhitespace() {
+        #expect(SentenceFinder.lastSentence(in: "Hi. she don't like it \n", reachesDocumentStart: false)?.text == "she don't like it")
+        #expect(SentenceFinder.lastSentence(in: "He go home. ", reachesDocumentStart: true)?.text == "He go home.")
+        #expect(SentenceFinder.lastSentence(in: "see example.com now", reachesDocumentStart: true)?.text == "see example.com now")
+    }
+
+    @Test func needsLetters() {
         #expect(SentenceFinder.lastSentence(in: "Done. ...", reachesDocumentStart: false) == nil)
-        #expect(SentenceFinder.lastSentence(in: "no terminator", reachesDocumentStart: true) == nil)
+        #expect(SentenceFinder.lastSentence(in: "Done.\n  ", reachesDocumentStart: true)?.text == "Done.")
+        #expect(SentenceFinder.lastSentence(in: "", reachesDocumentStart: true) == nil)
     }
 }
 

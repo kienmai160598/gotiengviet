@@ -47,14 +47,17 @@ menu in the menu bar: VietKey > Forget Learned Corrections.
 ## Grammar (English)
 
 Status: PoC. Builds and unit tests pass. Mac: the card and applying two fixes in a row checked
-by hand in Notes 2026-11-11; other apps not tested yet.
+by hand in Notes 2026-11-11; checking on a pause seen working in a chat app the same day.
 
 `Grammar/` wraps [Harper](https://github.com/Automattic/harper) (harper-core 3.0.0, Apache-2.0,
 offline) for Swift through UniFFI. How it works on Mac:
 
-- A sentence is checked when whitespace follows `.`, `?` or `!` (so "example.com" and "3.14"
-  do not end one). It is read back from the document, up to 600 characters before the caret,
-  and must start after a newline, after an earlier sentence, or at the document start.
+- The sentence at the caret is checked once typing pauses for 1 second (untuned), finished or
+  not, so a chat message is checked before Return sends it. Any key hides the card, so it never
+  flashes mid-typing. The word still being typed is left out. The sentence is read back from
+  the document, up to 600 characters before the caret, and must start after a newline, after
+  `.`, `?` or `!` plus whitespace (so "example.com" and "3.14" do not end one), or at the
+  document start.
 - Only English sentences are sent: no Vietnamese letters, and under a quarter of the words
   read as Vietnamese typed without marks ("Ok anh, de em check lai" is skipped).
 - Off in Harper: the `SpellCheck` and `WrongNegative` rules (they flag every Vietnamese word
@@ -63,14 +66,15 @@ offline) for Swift through UniFFI. How it works on Mac:
 - Problems show one at a time in a Liquid Glass card under the sentence: the category, the
   sentence with the fix marked in place, Harper's message, up to 3 fixes, Ignore, and arrows when
   there are more. Clicking a fix replaces the text only if it is still exactly where it was
-  checked, then the next problem shows. Toggle from the input menu: VietKey > Check English Grammar.
+  checked, then the next problem shows. Ignored and closed problems stay hidden until the
+  text field loses focus. Toggle from the input menu: VietKey > Check English Grammar.
 - Notes reports the line's rect one line too high, so the card is moved down for Notes only
   (`TextGeometry.swift`); NSTextView apps (TextEdit) report it exactly.
 
 Limits: Apple Silicon Macs only. The app grows by about 17 MB (Release, unstripped) and Harper
 peaks around 195 MB of RAM, so iOS is roadmap (likely too much for a keyboard extension;
-untested). "Mr. Smith" or "e.g. this" end a sentence early. The last sentence of a chat message is
-never checked: Return sends it, and without a final period nothing triggers. Apps that do not expose their text
+untested). "Mr. Smith" or "e.g. this" end a sentence early. A chat message sent within 1 second of
+the last key is not checked. Apps that do not expose their text
 to input methods (likely Chrome and Electron) get no suggestions.
 
 ## Layout

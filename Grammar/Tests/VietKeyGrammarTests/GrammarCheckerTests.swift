@@ -14,6 +14,13 @@ import VietKeyGrammar
         #expect(issue.replacements.first == "goes")
     }
 
+    /// Checked while typing pauses, so the end of the sentence may be missing.
+    @Test func checksAnUnfinishedSentenceWithoutFlaggingItsEnd() throws {
+        let issues = try Self.checker.check(text: "she don't like")
+        #expect(issues.map(\.replacements.first) == ["doesn't"])
+        #expect(try Self.checker.check(text: "Can you check the logs on the").isEmpty)
+    }
+
     @Test(arguments: [
         "He goes to school every day.",
         "Can you check the logs on the staging server?",
