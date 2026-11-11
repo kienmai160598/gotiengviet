@@ -6,6 +6,7 @@ cd "$(dirname "$0")/.."
 CONFIG="Release"
 [[ "${1:-}" == "--debug" ]] && CONFIG="Debug"   # Debug builds include the keystroke trace
 
+Tools/build-grammar.sh
 xcodegen generate --quiet
 xcodebuild -project VietKey.xcodeproj -scheme VietKeyMac -configuration "$CONFIG" \
   -derivedDataPath .build/xcode -quiet build

@@ -13,6 +13,7 @@ else {
 
 let tables = ContinuousClock().measure { _ = SharedModels.frequencies }
 logger.info("Frequency tables loaded in \(tables, privacy: .public)")
+GrammarService.warmUp()
 logger.info("IMKServer started on \(connectionName, privacy: .public)")
 withExtendedLifetime(server) {
     NSApplication.shared.run()

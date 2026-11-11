@@ -11,6 +11,7 @@ final class VietKeyInputController: IMKInputController {
         frequencies: SharedModels.frequencies,
         corrections: SharedModels.corrections
     )
+    private let grammar = GrammarAssistant()
     private static let noReplacement = NSRange(location: NSNotFound, length: 0)
 
     override func recognizedEvents(_ sender: Any!) -> Int {
@@ -25,9 +26,13 @@ final class VietKeyInputController: IMKInputController {
         ) {
             switch action {
             case .session(let key):
-                return render(session.handle(key), to: client, consumesKey: key == .escape)
+                let consumed = render(session.handle(key), to: client, consumesKey: key == .escape)
+                let typed: Character? = if case .character(let char) = key, !consumed { char } else { nil }
+                noteKeyReachedDocument(typed, client: client)
+                return consumed
             case .commitThenPassthrough:
                 render(session.commit(), to: client, consumesKey: false)
+                noteKeyReachedDocument(event.characters?.first.flatMap { $0.isNewline ? $0 : nil }, client: client)
                 return false
             }
         }
@@ -43,6 +48,8 @@ final class VietKeyInputController: IMKInputController {
 
     override func deactivateServer(_ sender: Any!) {
         commitComposition(sender)
+        let grammar = grammar
+        MainActor.assumeIsolated { grammar.focusLeft() }
         super.deactivateServer(sender)
     }
 
@@ -50,11 +57,31 @@ final class VietKeyInputController: IMKInputController {
     override func menu() -> NSMenu! {
         let menu = NSMenu()
         menu.addItem(withTitle: "Forget Learned Corrections", action: #selector(forgetCorrections(_:)), keyEquivalent: "")
+        let grammarItem = menu.addItem(withTitle: "Check English Grammar", action: #selector(toggleGrammar(_:)), keyEquivalent: "")
+        grammarItem.state = GrammarService.isEnabled ? .on : .off
         return menu
+    }
+
+    @objc private func toggleGrammar(_ sender: Any?) {
+        GrammarService.isEnabled.toggle()
+        if !GrammarService.isEnabled { dismissGrammar() }
     }
 
     @objc private func forgetCorrections(_ sender: Any?) {
         SharedModels.corrections.forgetAll()
+    }
+
+    /// IMKit calls every controller method on the main thread, but its headers do not say so;
+    /// these two hand that knowledge to the compiler.
+    private func noteKeyReachedDocument(_ char: Character?, client: IMKTextInput) {
+        nonisolated(unsafe) let (controller, client) = (self, client)
+        let grammar = grammar
+        MainActor.assumeIsolated { grammar.keyReachedDocument(char, client: client, controller: controller) }
+    }
+
+    private func dismissGrammar() {
+        let grammar = grammar
+        MainActor.assumeIsolated { grammar.dismiss() }
     }
 
     /// Returns whether the key event was consumed. After a commit, boundary keys

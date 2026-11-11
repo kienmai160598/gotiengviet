@@ -1,0 +1,22 @@
+[package]
+name = "vietkey_grammar"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["lib", "staticlib"]
+
+[[bin]]
+name = "uniffi-bindgen-swift"
+path = "src/bin/uniffi-bindgen-swift.rs"
+
+[dependencies]
+# Thesaurus is a default feature we do not use; concurrent makes the linter Send + Sync.
+harper-core = { version = "=3.0.0", default-features = false, features = ["concurrent"] }
+thiserror = "2.0.21"
+uniffi = { version = "=0.32.2", features = ["cli"] }
+
+[profile.release]
+lto = true
+codegen-units = 1

@@ -1,9 +1,9 @@
 import Foundation
 import InputMethodKit
 
-/// Replaces text the app has already inserted, for Backspace-to-revert. Only acts when the
-/// app proves the exact text sits right before the caret, so a failure falls back to a
-/// normal Backspace instead of corrupting the document.
+/// Replaces text the app has already inserted, for Backspace-to-revert and grammar fixes. Only
+/// acts when the app proves the exact text is where it is expected, so a failure leaves the
+/// document untouched instead of corrupting it.
 enum TextReplacer {
     /// Terminals hand typed text to the shell at once; it cannot be edited afterwards.
     private static let unsupportedClients: Set<String> = ["com.apple.Terminal"]
@@ -18,6 +18,20 @@ enum TextReplacer {
         return true
     }
 
+    /// Replaces `expected` at `location`, before the caret. NSTextView keeps the caret where it
+    /// was (shifted by the change in length); other apps are not checked yet.
+    static func replace(_ expected: String, at location: Int, with replacement: String, in client: IMKTextInput) -> Bool {
+        let range = NSRange(location: location, length: expected.utf16.count)
+        let caret = client.selectedRange()
+        guard !unsupportedClients.contains(client.bundleIdentifier() ?? ""),
+              caret.location != NSNotFound, caret.location >= NSMaxRange(range),
+              read(range, from: client) == expected
+        else { return false }
+        client.insertText(replacement, replacementRange: range)
+        Trace.log("  fix caret before=\(caret) after=\(client.selectedRange())")
+        return true
+    }
+
     private static func rangeBeforeCaret(matching expected: String, in client: IMKTextInput) -> NSRange? {
         let caret = client.selectedRange()
         let length = expected.utf16.count
@@ -26,7 +40,7 @@ enum TextReplacer {
         return read(range, from: client) == expected ? range : nil
     }
 
-    private static func read(_ range: NSRange, from client: IMKTextInput) -> String? {
+    static func read(_ range: NSRange, from client: IMKTextInput) -> String? {
         var actual = NSRange(location: NSNotFound, length: 0)
         guard let text = client.string(from: range, actualRange: &actual), actual == range else { return nil }
         return text

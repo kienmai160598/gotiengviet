@@ -44,11 +44,41 @@ Each correction is remembered for that exact key sequence (case-insensitive), on
 Stored in the input method's UserDefaults (`VietKey.corrections`). Clear it from the input
 menu in the menu bar: VietKey > Forget Learned Corrections.
 
+## Grammar (English)
+
+Status: PoC. Builds and unit tests pass. Mac: the card and applying two fixes in a row checked
+by hand in Notes 2026-11-11; other apps not tested yet.
+
+`Grammar/` wraps [Harper](https://github.com/Automattic/harper) (harper-core 3.0.0, Apache-2.0,
+offline) for Swift through UniFFI. How it works on Mac:
+
+- A sentence is checked when whitespace follows `.`, `?` or `!` (so "example.com" and "3.14"
+  do not end one). It is read back from the document, up to 600 characters before the caret,
+  and must start after a newline, after an earlier sentence, or at the document start.
+- Only English sentences are sent: no Vietnamese letters, and under a quarter of the words
+  read as Vietnamese typed without marks ("Ok anh, de em check lai" is skipped).
+- Off in Harper: the `SpellCheck` and `WrongNegative` rules (they flag every Vietnamese word
+  and tech term, "deps" -> "imps"), and lints of kind Capitalization, Style, Enhancement,
+  Readability, Regionalism and Formatting. Harper loads only while checking is on.
+- Problems show one at a time in a Liquid Glass card under the sentence: the category, the
+  sentence with the fix marked in place, Harper's message, up to 3 fixes, Ignore, and arrows when
+  there are more. Clicking a fix replaces the text only if it is still exactly where it was
+  checked, then the next problem shows. Toggle from the input menu: VietKey > Check English Grammar.
+- Notes reports the line's rect one line too high, so the card is moved down for Notes only
+  (`TextGeometry.swift`); NSTextView apps (TextEdit) report it exactly.
+
+Limits: Apple Silicon Macs only. The app grows by about 17 MB (Release, unstripped) and Harper
+peaks around 195 MB of RAM, so iOS is roadmap (likely too much for a keyboard extension;
+untested). "Mr. Smith" or "e.g. this" end a sentence early. The last sentence of a chat message is
+never checked: Return sends it, and without a final period nothing triggers. Apps that do not expose their text
+to input methods (likely Chrome and Electron) get no suggestions.
+
 ## Layout
 
 - `Core/`: Swift Package `VietKeyCore`, no AppKit/UIKit. Telex engine, syllable model, `InputSession`.
 - `Apps/macOS/`: InputMethodKit adapter (`VietKeyInputController`).
-- `Tools/`: install script, icon generator, frequency table generator.
+- `Grammar/`: Rust crate + Swift Package `VietKeyGrammar`, English grammar checking (Harper).
+- `Tools/`: install script, icon generator, frequency table generator, grammar build script.
 
 ## Commands
 
@@ -56,6 +86,7 @@ menu in the menu bar: VietKey > Forget Learned Corrections.
 cd Core && swift test                                                     # Core tests
 xcodebuild -scheme VietKeyCore -destination 'generic/platform=iOS' build  # Core builds for iOS (run in Core/)
 Tools/install-mac.sh                                                      # build + install the Mac input method
+Tools/build-grammar.sh && (cd Grammar && swift test)                      # grammar xcframework + tests (needs cargo)
 # Tatoeba eval: put vie.tsv and eng.tsv from downloads.tatoeba.org/exports/per_language in a folder
 cd Core && VIETKEY_TATOEBA_DIR=/path swift test -c release -Xswiftc -enable-testing --filter SentenceEval
 ```

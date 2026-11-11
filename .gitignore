@@ -5,3 +5,7 @@ DerivedData/
 *.xcodeproj/xcuserdata/
 *.xcworkspace/xcuserdata/
 *.xcodeproj/
+# Grammar build outputs, recreated by Tools/build-grammar.sh
+Grammar/target/
+Grammar/build/
+Grammar/Sources/VietKeyGrammar/vietkey_grammar.swift

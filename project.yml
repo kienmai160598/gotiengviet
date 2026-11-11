@@ -6,6 +6,8 @@ options:
 packages:
   VietKeyCore:
     path: Core
+  VietKeyGrammar:
+    path: Grammar
 targets:
   VietKeyMac:
     type: application
@@ -16,6 +18,7 @@ targets:
           - Info.plist
     dependencies:
       - package: VietKeyCore
+      - package: VietKeyGrammar
     settings:
       base:
         PRODUCT_NAME: VietKey
