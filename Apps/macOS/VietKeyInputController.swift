@@ -50,7 +50,9 @@ final class VietKeyInputController: IMKInputController {
         super.deactivateServer(sender)
     }
 
-    /// Shown under the VietKey icon in the menu bar input menu.
+    /// Shown under the VietKey icon in the menu bar input menu. TextInputMenuAgent rebuilds these
+    /// items and sets indentation level 2 on every one that is not a separator or section header,
+    /// so they always sit indented under its "VietKey" header, checkmark included.
     override func menu() -> NSMenu! {
         let menu = NSMenu()
         menu.addItem(withTitle: "Forget Learned Corrections", action: #selector(forgetCorrections(_:)), keyEquivalent: "")
