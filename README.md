@@ -7,6 +7,18 @@ Status: language detection is hard rules only (a word that is not a valid Vietna
 is restored to its raw keys). English words that are also valid syllables (is→í, now→nơ) are
 still converted: 48 of the 499 common words in the test fixtures. Lexicon scoring is next.
 
+## Learning from corrections
+
+Status: Core tested; not yet checked by hand in the Mac app.
+
+Each correction is remembered for that exact key sequence (case-insensitive), on this device only:
+
+- Backspace revert after a boundary (`text ` back to "tẽt"): those keys stay Vietnamese.
+- Esc while the word shows Vietnamese (`is` shown as "í"): those keys stay as typed.
+
+Stored in the input method's UserDefaults (`VietKey.corrections`). Clear it from the input
+menu in the menu bar: VietKey > Forget Learned Corrections.
+
 ## Layout
 
 - `Core/`: Swift Package `VietKeyCore`, no AppKit/UIKit. Telex engine, syllable model, `InputSession`.

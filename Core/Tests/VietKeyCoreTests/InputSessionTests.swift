@@ -6,7 +6,7 @@ private func type(_ keys: String, into session: inout InputSession) -> Compositi
 }
 
 private func commitWord(_ keys: String) -> String? {
-    var session = InputSession(lexicon: TestLexicon())
+    var session = InputSession(lexicon: TestLexicon(), corrections: InMemoryCorrectionStore())
     _ = type(keys, into: &session)
     guard case .commit(let text, _) = session.handle(.character(" ")) else { return nil }
     return text
@@ -53,12 +53,12 @@ struct InputSessionTests {
     private static let englishManglingBaseline = 48
 
     @Test func composingReportsDisplayAndRaw() {
-        var session = InputSession(lexicon: TestLexicon())
+        var session = InputSession(lexicon: TestLexicon(), corrections: InMemoryCorrectionStore())
         #expect(type("vieetj", into: &session) == .composing(display: "việt", raw: "vieetj"))
     }
 
     @Test func backspaceRemovesLastLetterThenEndsComposition() {
-        var session = InputSession(lexicon: TestLexicon())
+        var session = InputSession(lexicon: TestLexicon(), corrections: InMemoryCorrectionStore())
         _ = type("as", into: &session)
         #expect(session.handle(.backspace) == .composing(display: "", raw: ""))
         #expect(!session.isComposing)
@@ -66,14 +66,14 @@ struct InputSessionTests {
     }
 
     @Test func escapeCommitsRawKeys() {
-        var session = InputSession(lexicon: TestLexicon())
+        var session = InputSession(lexicon: TestLexicon(), corrections: InMemoryCorrectionStore())
         _ = type("mix", into: &session)
         #expect(session.handle(.escape) == .commit(text: "mix", raw: "mix"))
         #expect(session.handle(.escape) == .passthrough)
     }
 
     @Test func boundaryWithoutCompositionPassesThrough() {
-        var session = InputSession(lexicon: TestLexicon())
+        var session = InputSession(lexicon: TestLexicon(), corrections: InMemoryCorrectionStore())
         #expect(session.handle(.character(" ")) == .passthrough)
     }
 }

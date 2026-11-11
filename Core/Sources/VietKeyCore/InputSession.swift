@@ -4,12 +4,16 @@ public struct InputSession: Sendable {
     private var composition: Composition
     private let style: ToneStyle
     private let lexicon: any EnglishLexicon
+    private let corrections: any CorrectionStore
     /// Set when a boundary key changed the shown word, valid only for the very next key.
     private var revertible: Revertible?
+    /// The revert just handed to the adapter, learned only once the adapter confirms it.
+    private var offeredRevert: Revertible?
 
-    public init(style: ToneStyle = .traditional, lexicon: any EnglishLexicon) {
+    public init(style: ToneStyle = .traditional, lexicon: any EnglishLexicon, corrections: any CorrectionStore) {
         self.style = style
         self.lexicon = lexicon
+        self.corrections = corrections
         composition = Composition(style: style)
         SyllablePrefixes.warmUp()
     }
@@ -19,6 +23,7 @@ public struct InputSession: Sendable {
     public mutating func handle(_ key: InputKey) -> CompositionUpdate {
         let pendingRevert = revertible
         revertible = nil
+        offeredRevert = nil
         switch key {
         case .character(let char) where char.isASCII && char.isLetter:
             composition.type(char)
@@ -27,6 +32,7 @@ public struct InputSession: Sendable {
             return finishWord(boundary: boundary)
         case .backspace:
             guard isComposing else {
+                offeredRevert = pendingRevert
                 return pendingRevert.map { .revert(expected: $0.inserted, replacement: $0.shown) } ?? .passthrough
             }
             deleteBackward()
@@ -34,6 +40,9 @@ public struct InputSession: Sendable {
         case .escape:
             guard isComposing else { return .passthrough }
             let raw = composition.raw
+            if resolve(composition, isFinal: false) != raw {
+                corrections.record(.typedKeys, for: raw)
+            }
             reset()
             return .commit(text: raw, raw: raw)
         }
@@ -46,6 +55,14 @@ public struct InputSession: Sendable {
         return finishWord(boundary: nil)
     }
 
+    /// Call after the adapter applied a `.revert`, so these keys keep their Vietnamese next
+    /// time. Adapters that could not apply it (the text before the caret changed) skip this.
+    public mutating func confirmRevert() {
+        guard let offeredRevert else { return }
+        corrections.record(.vietnamese, for: offeredRevert.keys)
+        self.offeredRevert = nil
+    }
+
     /// Commits the word. When the shown Vietnamese gave way to the raw keys ("Đắk" became
     /// "DDawks"), Backspace right after the boundary brings back what was shown.
     private mutating func finishWord(boundary: Character?) -> CompositionUpdate {
@@ -54,7 +71,7 @@ public struct InputSession: Sendable {
         let text = resolve(composition, isFinal: true)
         let wasShowingVietnamese = resolve(composition, isFinal: false) != raw
         if let boundary, wasShowingVietnamese, text == raw {
-            revertible = Revertible(inserted: text + String(boundary), shown: composition.spelledText)
+            revertible = Revertible(keys: raw, inserted: text + String(boundary), shown: composition.spelledText)
         }
         reset()
         return .commit(text: text, raw: raw)
@@ -65,12 +82,18 @@ public struct InputSession: Sendable {
     /// - While typing, Vietnamese stays as long as more keys could still make a real syllable;
     ///   once that is impossible the keys as typed are shown ("goog", not "gôg").
     /// - On commit, Vietnamese is kept only when it is a real syllable ("tẽt" becomes "text").
+    /// - A correction the user made earlier for these exact keys wins over every rule below.
     /// - After a double-key undo the user has taken manual control, so the shown text stands
     ///   ("tesst" gives "test"), unless the raw keys are an English word ("class", "coffee").
     private func resolve(_ composition: Composition, isFinal: Bool) -> String {
         let display = isFinal ? composition.spelledText : composition.text
         let raw = composition.raw
         if display == raw { return display }
+        switch corrections.preference(for: raw) {
+        case .typedKeys: return raw
+        case .vietnamese: return display
+        case nil: break
+        }
         if composition.isLiteral { return isEnglishWord(raw) ? raw : display }
         let isVietnamese = isFinal ? composition.isValidVietnamese : composition.canBecomeVietnamese
         return isVietnamese ? display : raw
@@ -104,6 +127,7 @@ public struct InputSession: Sendable {
 }
 
 private struct Revertible: Sendable {
+    let keys: String
     /// The committed word plus the boundary the app inserted after it.
     let inserted: String
     let shown: String

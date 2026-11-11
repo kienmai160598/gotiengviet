@@ -5,7 +5,7 @@ import VietKeyCore
 /// when the boundary replaced it with the raw keys.
 struct RevertTests {
     private func session(afterTyping keys: String) -> InputSession {
-        var session = InputSession(lexicon: TestLexicon())
+        var session = InputSession(lexicon: TestLexicon(), corrections: InMemoryCorrectionStore())
         keys.forEach { _ = session.handle(.character($0)) }
         return session
     }

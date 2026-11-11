@@ -6,7 +6,9 @@ import VietKeyCore
 /// marked text, so restoring English on commit never needs synthetic backspaces.
 @objc(VietKeyInputController)
 final class VietKeyInputController: IMKInputController {
-    private var session = InputSession(lexicon: SpellCheckerLexicon())
+    /// One store for every controller, so a correction made in one app applies in all of them.
+    private static let corrections = UserDefaultsCorrectionStore(defaults: .standard)
+    private var session = InputSession(lexicon: SpellCheckerLexicon(), corrections: corrections)
     private static let noReplacement = NSRange(location: NSNotFound, length: 0)
 
     override func recognizedEvents(_ sender: Any!) -> Int {
@@ -42,6 +44,17 @@ final class VietKeyInputController: IMKInputController {
         super.deactivateServer(sender)
     }
 
+    /// Shown under the VietKey icon in the menu bar input menu.
+    override func menu() -> NSMenu! {
+        let menu = NSMenu()
+        menu.addItem(withTitle: "Forget Learned Corrections", action: #selector(forgetCorrections(_:)), keyEquivalent: "")
+        return menu
+    }
+
+    @objc private func forgetCorrections(_ sender: Any?) {
+        Self.corrections.forgetAll()
+    }
+
     /// Returns whether the key event was consumed. After a commit, boundary keys
     /// (space, punctuation) still reach the app so it inserts them itself.
     @discardableResult
@@ -56,7 +69,9 @@ final class VietKeyInputController: IMKInputController {
             client.insertText(text, replacementRange: Self.noReplacement)
             return consumesKey
         case .revert(let expected, let replacement):
-            return TextReplacer.replace(expected, with: replacement, in: client)
+            let replaced = TextReplacer.replace(expected, with: replacement, in: client)
+            if replaced { session.confirmRevert() }
+            return replaced
         case .passthrough:
             return false
         }
