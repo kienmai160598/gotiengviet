@@ -8,7 +8,7 @@ let package = Package(
         .library(name: "VietKeyCore", targets: ["VietKeyCore"]),
     ],
     targets: [
-        .target(name: "VietKeyCore"),
+        .target(name: "VietKeyCore", resources: [.process("Frequency/Data")]),
         .testTarget(name: "VietKeyCoreTests", dependencies: ["VietKeyCore"]),
     ]
 )

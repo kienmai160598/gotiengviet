@@ -6,9 +6,11 @@ import VietKeyCore
 /// marked text, so restoring English on commit never needs synthetic backspaces.
 @objc(VietKeyInputController)
 final class VietKeyInputController: IMKInputController {
-    /// One store for every controller, so a correction made in one app applies in all of them.
-    private static let corrections = UserDefaultsCorrectionStore(defaults: .standard)
-    private var session = InputSession(lexicon: SpellCheckerLexicon(), corrections: corrections)
+    private var session = InputSession(
+        lexicon: SpellCheckerLexicon(),
+        frequencies: SharedModels.frequencies,
+        corrections: SharedModels.corrections
+    )
     private static let noReplacement = NSRange(location: NSNotFound, length: 0)
 
     override func recognizedEvents(_ sender: Any!) -> Int {
@@ -52,7 +54,7 @@ final class VietKeyInputController: IMKInputController {
     }
 
     @objc private func forgetCorrections(_ sender: Any?) {
-        Self.corrections.forgetAll()
+        SharedModels.corrections.forgetAll()
     }
 
     /// Returns whether the key event was consumed. After a commit, boundary keys

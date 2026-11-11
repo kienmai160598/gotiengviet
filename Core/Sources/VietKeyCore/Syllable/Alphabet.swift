@@ -30,6 +30,17 @@ enum Tone: Sendable, Equatable {
         }
     }
 
+    var telexKey: Character? {
+        switch self {
+        case .level: nil
+        case .acute: "s"
+        case .grave: "f"
+        case .hook: "r"
+        case .tilde: "x"
+        case .dot: "j"
+        }
+    }
+
     var fitsStopFinal: Bool { self == .acute || self == .dot }
 }
 
@@ -43,6 +54,11 @@ enum Alphabet {
         "ă": "a", "â": "a", "ê": "e", "ô": "o", "ơ": "o", "ư": "u", "đ": "d",
     ]
 
+    private static let telexKeys: [Character: String] = [
+        "ă": "aw", "â": "aa", "ê": "ee", "ô": "oo", "ơ": "ow", "ư": "uw", "đ": "dd",
+    ]
+
     static func isVowel(_ char: Character) -> Bool { vowels.contains(char) }
+    static func telexKeys(for char: Character) -> String { telexKeys[char] ?? String(char) }
     static func base(_ char: Character) -> Character { bases[char] ?? char }
 }

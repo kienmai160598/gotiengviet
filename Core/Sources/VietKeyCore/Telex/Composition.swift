@@ -47,6 +47,11 @@ struct Composition: Equatable, Sendable {
         return chars
     }
 
+    /// The spelled word as canonical Telex keys, tone key last: "hòa" and "hoà" give "hoaf".
+    var telexKeys: String {
+        spelledChars.map(Alphabet.telexKeys(for:)).joined() + (tone.telexKey.map { String($0) } ?? "")
+    }
+
     mutating func type(_ key: Character) {
         rawKeys.append(key)
         let lower = Character(key.lowercased())

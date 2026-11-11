@@ -11,39 +11,49 @@ struct LearningTests {
     }
 
     private func committed(_ word: String) -> CompositionUpdate? {
-        var session = InputSession(lexicon: TestLexicon(), corrections: store)
+        var session = InputSession(lexicon: TestLexicon(), frequencies: testFrequencies, corrections: store)
         return type(word + " ", into: &session).last
     }
 
     private func escape(_ keys: String) {
-        var session = InputSession(lexicon: TestLexicon(), corrections: store)
+        var session = InputSession(lexicon: TestLexicon(), frequencies: testFrequencies, corrections: store)
         _ = type(keys, into: &session)
         _ = session.handle(.escape)
     }
 
-    private func revert(_ keys: String, confirmed: Bool) {
-        var session = InputSession(lexicon: TestLexicon(), corrections: store)
+    private func revert(_ keys: String, confirmed: Bool = true, then next: InputKey) {
+        var session = InputSession(lexicon: TestLexicon(), frequencies: testFrequencies, corrections: store)
         _ = type(keys + " ", into: &session)
         _ = session.handle(.backspace)
         if confirmed { session.confirmRevert() }
+        _ = session.handle(next)
     }
 
-    @Test func confirmedRevertKeepsVietnameseNextTime() {
-        revert("text", confirmed: true)
+    @Test(arguments: [InputKey.character(" "), .character("x"), .escape])
+    func revertKeptByTypingOnKeepsVietnameseNextTime(next: InputKey) {
+        revert("text", then: next)
         #expect(committed("text") == .commit(text: "tẽt", raw: "text"))
         #expect(store.preference(for: "text") == .vietnamese)
     }
 
+    /// Deleting "is " with Backspace first reverts to "í"; the next Backspace shows the user
+    /// was deleting, not choosing the Vietnamese.
+    @Test func revertFollowedByBackspaceIsNotLearned() {
+        revert("is", then: .backspace)
+        #expect(store.preference(for: "is") == nil)
+        #expect(committed("is") == .commit(text: "is", raw: "is"))
+    }
+
     @Test func revertTheAdapterCouldNotApplyIsNotLearned() {
-        revert("text", confirmed: false)
+        revert("text", confirmed: false, then: .character(" "))
         #expect(committed("text") == .commit(text: "text", raw: "text"))
     }
 
     @Test func escapeKeepsTypedKeysNextTimeLiveAndOnCommit() {
-        escape("is")
-        var session = InputSession(lexicon: TestLexicon(), corrections: store)
-        #expect(type("is", into: &session).last == .composing(display: "is", raw: "is"))
-        #expect(session.handle(.character(" ")) == .commit(text: "is", raw: "is"))
+        escape("car")
+        var session = InputSession(lexicon: TestLexicon(), frequencies: testFrequencies, corrections: store)
+        #expect(type("car", into: &session).last == .composing(display: "car", raw: "car"))
+        #expect(session.handle(.character(" ")) == .commit(text: "car", raw: "car"))
     }
 
     @Test func escapeOnWordAlreadyShownAsTypedLearnsNothing() {
@@ -52,18 +62,18 @@ struct LearningTests {
     }
 
     @Test func learnedKeysMatchAnyCase() {
-        escape("is")
-        #expect(committed("Is") == .commit(text: "Is", raw: "Is"))
+        escape("car")
+        #expect(committed("Car") == .commit(text: "Car", raw: "Car"))
     }
 
     @Test func onlyTheExactKeysAreAffected() {
-        escape("is")
-        #expect(committed("isf") == .commit(text: "ì", raw: "isf"))
+        escape("car")
+        #expect(committed("cars") == .commit(text: "cá", raw: "cars"))
     }
 
     @Test func learnedWordThatPrefixesAVietnameseWordOnlyAffectsThoseKeys() {
         escape("now")
-        var session = InputSession(lexicon: TestLexicon(), corrections: store)
+        var session = InputSession(lexicon: TestLexicon(), frequencies: testFrequencies, corrections: store)
         let shown = type("nowi", into: &session)
         #expect(shown[2] == .composing(display: "now", raw: "now"))
         #expect(shown[3] == .composing(display: "nơi", raw: "nowi"))
@@ -71,19 +81,19 @@ struct LearningTests {
     }
 
     @Test func forgetAllRestoresTheRules() {
-        escape("is")
+        escape("car")
         store.forgetAll()
-        #expect(committed("is") == .commit(text: "í", raw: "is"))
+        #expect(committed("car") == .commit(text: "cả", raw: "car"))
     }
 
     @Test func userDefaultsStoreSurvivesRelaunch() throws {
         let suite = "VietKeyTests.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
-        UserDefaultsCorrectionStore(defaults: defaults).record(.typedKeys, for: "Is")
+        UserDefaultsCorrectionStore(defaults: defaults).record(.typedKeys, for: "Car")
         let relaunched = UserDefaultsCorrectionStore(defaults: defaults)
-        #expect(relaunched.preference(for: "is") == .typedKeys)
+        #expect(relaunched.preference(for: "car") == .typedKeys)
         relaunched.forgetAll()
-        #expect(UserDefaultsCorrectionStore(defaults: defaults).preference(for: "is") == nil)
+        #expect(UserDefaultsCorrectionStore(defaults: defaults).preference(for: "car") == nil)
     }
 }

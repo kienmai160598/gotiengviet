@@ -4,7 +4,7 @@ import Testing
 /// The marked text must show, on every key, what a word boundary would insert.
 struct LiveDisplayTests {
     private func updates(for keys: String) -> (session: InputSession, updates: [CompositionUpdate]) {
-        var session = InputSession(lexicon: TestLexicon(), corrections: InMemoryCorrectionStore())
+        var session = InputSession(lexicon: TestLexicon(), frequencies: testFrequencies, corrections: InMemoryCorrectionStore())
         let updates = keys.map { session.handle(.character($0)) }
         return (session, updates)
     }

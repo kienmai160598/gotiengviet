@@ -56,3 +56,8 @@ struct TestLexicon: EnglishLexicon {
         word == word.uppercased() || Self.words.contains(word.lowercased())
     }
 }
+
+/// The real bundled tables, so the ratchets measure what ships.
+let testFrequencies: BundledWordFrequencies = {
+    do { return try BundledWordFrequencies() } catch { fatalError("Frequency tables not bundled: \(error)") }
+}()

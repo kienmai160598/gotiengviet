@@ -11,6 +11,8 @@ else {
     exit(EXIT_FAILURE)
 }
 
+let tables = ContinuousClock().measure { _ = SharedModels.frequencies }
+logger.info("Frequency tables loaded in \(tables, privacy: .public)")
 logger.info("IMKServer started on \(connectionName, privacy: .public)")
 withExtendedLifetime(server) {
     NSApplication.shared.run()
