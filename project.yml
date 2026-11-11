@@ -1,0 +1,28 @@
+name: VietKey
+options:
+  bundleIdPrefix: dev.vietkey
+  deploymentTarget:
+    macOS: "26.0"
+packages:
+  VietKeyCore:
+    path: Core
+targets:
+  VietKeyMac:
+    type: application
+    platform: macOS
+    sources:
+      - path: Apps/macOS
+        excludes:
+          - Info.plist
+    dependencies:
+      - package: VietKeyCore
+    settings:
+      base:
+        PRODUCT_NAME: VietKey
+        PRODUCT_BUNDLE_IDENTIFIER: dev.vietkey.inputmethod.VietKey
+        INFOPLIST_FILE: Apps/macOS/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        SWIFT_VERSION: "6.0"
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGN_IDENTITY: "-"
+        ENABLE_HARDENED_RUNTIME: NO
