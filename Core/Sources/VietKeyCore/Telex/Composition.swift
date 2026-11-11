@@ -53,10 +53,24 @@ struct Composition: Equatable, Sendable {
     }
 
     mutating func type(_ key: Character) {
+        let repeatsPreviousKey = rawKeys.last?.lowercased() == key.lowercased()
         rawKeys.append(key)
         let lower = Character(key.lowercased())
+        let wasLiteral = isLiteral
         if !isLiteral, applyTelex(lower, key: key) { return }
-        append(lower, key: key)
+        if isLiteral, !wasLiteral, !repeatsPreviousKey {
+            spellAsTyped()
+        } else {
+            append(lower, key: key)
+        }
+    }
+
+    /// A double-key undo drops the key that made the mark ("aaa" gives "aa", "tesst" gives
+    /// "test"). When that key was typed further back and marked across other letters ("Canada":
+    /// the second a made "cân"), the user was not typing a mark at all, so every key comes back.
+    private mutating func spellAsTyped() {
+        letters = rawKeys.map { Letter(char: Character($0.lowercased()), key: $0) }
+        tone = .level
     }
 
     /// Removes the last visible letter. The tone stays while a vowel remains.

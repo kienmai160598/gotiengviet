@@ -11,23 +11,25 @@ like the, anh do not count), so "Team bên em" and "Ok, cả nhà" stay Vietname
 cả" gives car (chosen over a longer run so English right after Vietnamese works). Esc counts as English; a kept
 Backspace revert counts as Vietnamese. Context is never reset (not on Return either).
 While typing, the Vietnamese reading is shown as long as it is still possible.
-Mac: tables load verified; the context rule is Core-tested only, not typed by hand yet.
+Mac: context rule and the double-key undo fix (Canada, element) checked by hand 2026-11-11.
 
 Word error rate on Tatoeba running text (tone key typed last, test word list instead of the
 system spell checker; eval data not in the repo; factors were picked on this same data):
 
 | Text | No context | With context |
 |---|---|---|
-| Vietnamese, 33k sentences | 0.139% | 0.139% |
-| English, 34k sentences, each typed fresh | 1.10% | 0.50% |
-| English, each right after a Vietnamese sentence | 1.10% | 0.50% |
-| English, typed as one document | 1.10% | 0.15% |
+| Vietnamese, 33k sentences | 0.139% | 0.134% |
+| English, 34k sentences, each typed fresh | 1.10% | 0.43% |
+| English, each right after a Vietnamese sentence | 1.10% | 0.43% |
+| English, typed as one document | 1.10% | 0.08% |
+
+The "No context" column was measured before the double-key undo fix (Canada→Canda).
 
 Untuned: the 20-per-million evidence threshold and the 1/100 factor were set by hand.
 Known misses: an English sentence opening "There"/"These" with no English run before gets
 thể/thế; two English words in a row turn the next colliding word English ("Unit test cả" gives
-car); tô (typed `too`) becomes "too". Separate bug: the double-key undo drops a letter in words with a repeated vowel
-that are not in the word lists (Canada→Canda, Baya→Bây).
+car); tô (typed `too`) becomes "too"; names whose Telex reading is a valid syllable become
+Vietnamese (Baya→Bây, Boris→Bói).
 
 ## Learning from corrections
 

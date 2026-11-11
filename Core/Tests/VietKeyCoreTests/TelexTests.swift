@@ -31,6 +31,11 @@ struct TelexTests {
         #expect(compose("coffee") == "cofee")
     }
 
+    @Test(arguments: ["Canada", "Amanda", "element", "learners", "auspices", "tenses", "lasts", "Berbers"])
+    func undoOfAMarkMadeAcrossLettersKeepsEveryKey(keys: String) {
+        #expect(compose(keys) == keys)
+    }
+
     @Test func deleteBackwardKeepsToneOnRemainingVowel() {
         var composition = Composition(style: .traditional)
         "tieengs".forEach { composition.type($0) }
