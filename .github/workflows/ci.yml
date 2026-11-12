@@ -1,4 +1,5 @@
-# Tests and builds on every push to main and every pull request. Publishes nothing.
+# Tests and builds the Mac app on every push to main and every pull request. Publishes nothing.
+# iOS is left out: it will be built and released with Fastlane.
 name: CI
 
 on:
@@ -32,8 +33,3 @@ jobs:
           xcodegen generate --quiet
           xcodebuild -project VietKey.xcodeproj -scheme VietKeyMac -configuration Release \
             -derivedDataPath .build/xcode -quiet build
-      - name: Build the iOS app for the simulator
-        run: |
-          xcodebuild -project VietKey.xcodeproj -scheme VietKeyiOS -configuration Debug \
-            -destination 'generic/platform=iOS Simulator' -derivedDataPath .build/ios-sim \
-            -quiet build CODE_SIGNING_ALLOWED=NO

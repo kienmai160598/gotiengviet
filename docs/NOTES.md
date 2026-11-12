@@ -253,9 +253,9 @@ git tag v0.1.1 && git push origin v0.1.1
 The workflow checks that the tag matches `MARKETING_VERSION`, runs the Core tests, builds with
 `Tools/package-mac.sh` and creates the release with `VietKey.zip`. Running it by hand (Actions >
 Release > Run workflow) only builds the zip and keeps it as a workflow artifact.
-`.github/workflows/ci.yml` runs the Core and grammar tests and builds the Mac app and the iOS
-app (simulator, unsigned) on every push to main and every pull request. The iOS UI tests do
-not run in CI (they need the simulator keyboard set up by hand, see above).
+`.github/workflows/ci.yml` runs the Core and grammar tests and builds the Mac app on every push
+to main and every pull request. iOS is not in these workflows; it is to be released with
+Fastlane.
 
 To release from this Mac instead: `Tools/package-mac.sh`, push main, then
 `gh release create v<version> .build/VietKey.zip`.
