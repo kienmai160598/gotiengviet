@@ -242,18 +242,30 @@ Core tests, an iOS simulator UI test and an NSTextView probe; not yet checked by
 
 ## Publishing a Mac release
 
+GitHub Actions builds and publishes releases (`.github/workflows/release.yml`, macos-26 runner):
+
 ```sh
-Tools/package-mac.sh     # Release build only, packed as .build/VietKey.zip, signature checked
-git push origin main     # first, so the tag lands on the commit that was built
-gh release create v0.1.0 .build/VietKey.zip --title "VietKey 0.1.0 (Mac)" \
-  --notes "Apple Silicon, macOS 26+. Signed ad hoc, not notarized."
+# 1. Bump MARKETING_VERSION in project.yml (say to 0.1.1), commit, push main.
+# 2. Tag that commit and push the tag:
+git tag v0.1.1 && git push origin v0.1.1
 ```
+
+The workflow checks that the tag matches `MARKETING_VERSION`, runs the Core tests, builds with
+`Tools/package-mac.sh` and creates the release with `VietKey.zip`. Running it by hand (Actions >
+Release > Run workflow) only builds the zip and keeps it as a workflow artifact.
+`.github/workflows/ci.yml` runs the Core and grammar tests and builds the Mac app and the iOS
+app (simulator, unsigned) on every push to main and every pull request. The iOS UI tests do
+not run in CI (they need the simulator keyboard set up by hand, see above).
+
+To release from this Mac instead: `Tools/package-mac.sh`, push main, then
+`gh release create v<version> .build/VietKey.zip`.
 
 Keep the asset name `VietKey.zip` and do not mark the release as a pre-release: `install.sh`
 downloads `releases/latest/download/VietKey.zip`, and GitHub's latest release skips
-pre-releases and drafts. The script never packs the installed app, which may be a Debug build
-that logs keystrokes. `Tools/build-grammar.sh` maps the home folder out of the Rust source
-paths, so the binary does not carry the builder's user name (checked with `strings`, 2026-11-12).
+pre-releases and drafts. `Tools/package-mac.sh` always builds Release and never packs the
+installed app, which may be a Debug build that logs keystrokes. `Tools/build-grammar.sh` maps
+the home folder out of the Rust source paths, so the binary does not carry the builder's user
+name (checked with `strings`, 2026-11-12).
 
 ## More developer commands
 

@@ -1,0 +1,39 @@
+# Tests and builds on every push to main and every pull request. Publishes nothing.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: macos-26          # Apple Silicon, needed for the aarch64 grammar build
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Core tests
+        run: cd Core && swift test
+      - name: Build the grammar checker
+        run: Tools/build-grammar.sh
+      - name: Grammar tests
+        run: cd Grammar && swift test
+      - name: Build the Mac app
+        run: |
+          xcodegen generate --quiet
+          xcodebuild -project VietKey.xcodeproj -scheme VietKeyMac -configuration Release \
+            -derivedDataPath .build/xcode -quiet build
+      - name: Build the iOS app for the simulator
+        run: |
+          xcodebuild -project VietKey.xcodeproj -scheme VietKeyiOS -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' -derivedDataPath .build/ios-sim \
+            -quiet build CODE_SIGNING_ALLOWED=NO

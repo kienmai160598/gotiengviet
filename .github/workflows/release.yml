@@ -1,0 +1,51 @@
+# Pushing a tag v<version> builds the Mac app and publishes it as that GitHub Release, which
+# install.sh downloads. Run it by hand (Actions > Release > Run workflow) to build the zip as a
+# workflow artifact without publishing anything.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write              # create the release and upload VietKey.zip
+
+concurrency:
+  group: release-${{ github.ref }}
+
+jobs:
+  mac:
+    runs-on: macos-26          # Apple Silicon, needed for the aarch64 grammar build
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - name: Tag must match MARKETING_VERSION in project.yml
+        if: github.ref_type == 'tag'
+        run: |
+          version="$(sed -n 's/^ *MARKETING_VERSION: *"\(.*\)"/\1/p' project.yml)"
+          if [[ "$GITHUB_REF_NAME" != "v$version" ]]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match MARKETING_VERSION $version in project.yml"
+            exit 1
+          fi
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Core tests
+        run: cd Core && swift test
+      - name: Build and pack VietKey.zip
+        run: Tools/package-mac.sh            # Release only, signature checked
+      - uses: actions/upload-artifact@v7
+        with:
+          name: VietKey-mac
+          path: .build/VietKey.zip
+          if-no-files-found: error
+      - name: Publish the GitHub Release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" .build/VietKey.zip --verify-tag \
+            --title "VietKey ${GITHUB_REF_NAME#v} (Mac)" \
+            --notes "Apple Silicon, macOS 26+. Signed ad hoc, not notarized. Built by GitHub Actions from ${GITHUB_SHA::7}.
+
+          Install or update: \`curl -fsSL https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/main/install.sh | bash\`"
