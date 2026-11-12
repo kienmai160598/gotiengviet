@@ -36,6 +36,61 @@ thể/thế; two English words in a row turn the next colliding word English ("U
 car); tô (typed `too`) becomes "too"; names whose Telex reading is a valid syllable become
 Vietnamese (Baya→Bây, Boris→Bói).
 
+## Install on a new Mac
+
+Needs an Apple Silicon Mac on macOS 26 or later, Xcode 26 or later (built here with Xcode 27.2),
+XcodeGen and Rust. The grammar checker is built from source (about 2 minutes) and the project
+needs it even for the iPhone build: a fresh clone fails with "Could not resolve package
+dependencies" until `Tools/build-grammar.sh` has run (checked 2026-11-12).
+
+```sh
+brew install xcodegen
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh   # Rust, for the grammar checker
+git clone https://github.com/kienmai160598/gotiengviet.git && cd gotiengviet
+```
+
+### Mac input method
+
+```sh
+Tools/install-mac.sh          # builds the grammar checker, then VietKey (Release), into ~/Library/Input Methods
+```
+
+Then System Settings > Keyboard > Input Sources > Edit > + > Vietnamese > VietKey. After an
+update, run the script again; it restarts the input method. `--debug` builds the Debug version,
+which logs keystrokes (see Trace in `Apps/Shared`); do not use it for daily typing.
+
+### iPhone keyboard
+
+1. Xcode > Settings > Accounts: sign in with your Apple ID. A free account works; its apps stop
+   opening after 7 days and need installing again.
+2. Put your team ID in `Config/Signing.local.xcconfig` (gitignored, so each Mac needs its own).
+   The ID is in Xcode > Settings > Accounts, or at developer.apple.com > Account > Membership.
+
+   ```sh
+   echo 'DEVELOPMENT_TEAM = <team ID>' > Config/Signing.local.xcconfig
+   ```
+
+   With a team other than the one that first registered `dev.vietkey.ios`, Xcode may refuse
+   the bundle IDs; change `bundleIdPrefix` and the IDs in `project.yml` if it does.
+3. On the iPhone: Settings > Privacy & Security > Developer Mode on, and trust the Mac when
+   you connect the cable.
+4. Build and install:
+
+   ```sh
+   xcrun devicectl list devices    # the Identifier column is <device>
+   Tools/build-grammar.sh          # once per clone: the project does not resolve without it
+   xcodegen generate
+   xcodebuild -scheme VietKeyiOS -configuration Release -destination 'id=<device>' \
+     -derivedDataPath .build/ios-device -allowProvisioningUpdates build
+   xcrun devicectl device install app --device <device> \
+     .build/ios-device/Build/Products/Release-iphoneos/VietKey.app
+   ```
+
+   `-allowProvisioningUpdates` lets Xcode create the signing profiles on the first build.
+5. On the iPhone: Settings > General > Keyboard > Keyboards > Add New Keyboard > VietKey. Turn
+   on Allow Full Access only for the key ticks (see Touches below). In a text field, hold the
+   globe key and pick VietKey.
+
 ## Learning from corrections
 
 Status: Core tested; not yet checked by hand in the Mac app.
@@ -85,10 +140,10 @@ to input methods (likely Chrome and Electron) get no suggestions.
 ## iOS and iPadOS keyboard
 
 Status: PoC. UI tests pass in the simulator on iPhone 17 Pro (iOS 26.5) and iPhone 18 Pro Max
-(iOS 27.0), 2026-11-11. Installed on an iPhone 14 Pro Max (iOS 27.2.1) but not yet checked
-there by hand. Memory is measured in the simulator only (see the emoji page below); the limit
-iOS puts on a keyboard extension on a device is not. Tested only in the container app's text
-field, not in Notes, Messages or Safari.
+(iOS 27.0), 2026-11-11. Used by hand on an iPhone 14 Pro Max (iOS 27.2.1) in Messages and the
+Claude app, 2026-11-12, for layout and look; the Telex results there are not checked against a
+list. Memory is measured in the simulator only (see the emoji page below); the limit iOS puts
+on a keyboard extension on a device is not. Not tried in Notes or Safari. Install: see above.
 
 A custom keyboard (QWERTY, Telex) that types through the same Core `InputSession` as the Mac,
 so words are decided Vietnamese or English the same way, and Backspace right after a boundary
@@ -238,10 +293,7 @@ Tools/install-mac.sh                                                      # buil
 Tools/build-grammar.sh && (cd Grammar && swift test)                      # grammar xcframework + tests (needs cargo)
 xcodegen generate && xcodebuild test -project VietKey.xcodeproj -scheme VietKeyiOS \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro'               # iOS keyboard UI tests
-# Device: put DEVELOPMENT_TEAM = <team ID> in Config/Signing.local.xcconfig (gitignored)
-xcodebuild -scheme VietKeyiOS -configuration Release -destination 'id=<device>' \
-  -derivedDataPath .build/ios-device -allowProvisioningUpdates build &&
-  xcrun devicectl device install app --device <device> .build/ios-device/Build/Products/Release-iphoneos/VietKey.app
+# iPhone install: see "Install on a new Mac"
 # Tatoeba eval: put vie.tsv and eng.tsv from downloads.tatoeba.org/exports/per_language in a folder
 cd Core && VIETKEY_TATOEBA_DIR=/path swift test -c release -Xswiftc -enable-testing --filter SentenceEval
 ```
