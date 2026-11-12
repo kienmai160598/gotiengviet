@@ -1,7 +1,7 @@
 # VietKey notes
 
 What each part does, what has been checked and how, and known limits. Setup is in the
-[README](../README.md).
+[README](../README.md) and [BUILDING.md](BUILDING.md).
 
 ## How words are decided
 
@@ -90,7 +90,7 @@ Status: PoC. UI tests pass in the simulator on iPhone 17 Pro (iOS 26.5) and iPho
 (iOS 27.0), 2026-11-11. Used by hand on an iPhone 14 Pro Max (iOS 27.2.1) in Messages and the
 Claude app, 2026-11-12, for layout and look; the Telex results there are not checked against a
 list. Memory is measured in the simulator only (see the emoji page below); the limit iOS puts
-on a keyboard extension on a device is not. Not tried in Notes or Safari. Install: see the README.
+on a keyboard extension on a device is not. Not tried in Notes or Safari. Install: see [BUILDING.md](BUILDING.md).
 
 A custom keyboard (QWERTY, Telex) that types through the same Core `InputSession` as the Mac,
 so words are decided Vietnamese or English the same way, and Backspace right after a boundary
