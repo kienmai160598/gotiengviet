@@ -1,9 +1,44 @@
 # VietKey (codename)
 
-Vietnamese Telex input method without a VN/EN toggle. macOS first; the shared `Core` package
-is built for iOS/iPadOS from day one.
+Vietnamese Telex input method without a VN/EN toggle: each word is typed as Vietnamese or
+English on its own, so "Team bên em" and "I bought a new car" both come out right with no
+switching. On Mac, English sentences also get grammar suggestions (Harper, offline). There is
+an iPhone keyboard too. The shared `Core` package is built for macOS, iOS and iPadOS.
 
-Status: each word is decided at the word boundary. A word stays Vietnamese when it is a valid
+Status: PoC. See each section below for what has been checked and how.
+
+## Install on Mac
+
+Needs an Apple Silicon Mac on macOS 26 or later. In Terminal:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/kienmai160598/gotiengviet/main/install.sh | bash
+```
+
+Then, the first time only: System Settings > Keyboard > Input Sources > Edit > + > Vietnamese >
+VietKey. Switch to it from the input menu in the menu bar. If VietKey is not in the list yet,
+log out and back in.
+
+- Update: run the same line again. It replaces the app and restarts the input method.
+- Uninstall: `curl -fsSL https://raw.githubusercontent.com/kienmai160598/gotiengviet/main/install.sh | bash -s -- --uninstall`,
+  then remove VietKey from Input Sources.
+
+What [`install.sh`](install.sh) does: downloads `VietKey.zip` from the latest
+[GitHub Release](https://github.com/kienmai160598/gotiengviet/releases/latest), checks the
+app's code signature, and copies `VietKey.app` into `~/Library/Input Methods` (no `sudo`). If
+the download or the check fails, the installed app is left as it was. The app is signed ad hoc,
+not with an Apple Developer ID, and not notarized. Release builds do not log keystrokes, and
+VietKey has no network code.
+
+Checked 2026-11-12 on the author's Mac only, from a local zip: install, update, uninstall, a
+404 download and a tampered app (refused). Not yet tried on a second Mac.
+
+The iPhone keyboard has no ready-made download: Apple requires each install to be signed with
+your own Apple account, so it is built from source (below).
+
+## How words are decided
+
+Each word is decided at the word boundary. A word stays Vietnamese when it is a valid
 syllable, unless the keys are an English word more than 3x as common (word frequency tables).
 After a run of English words the bar drops to 1/33x, so "I bought a new car" keeps car. A run
 needs 2 common English words in a row (rare ones like ko, dc and words valid in both languages
@@ -36,7 +71,7 @@ thể/thế; two English words in a row turn the next colliding word English ("U
 car); tô (typed `too`) becomes "too"; names whose Telex reading is a valid syllable become
 Vietnamese (Baya→Bây, Boris→Bói).
 
-## Install on a new Mac
+## Build from source
 
 Needs an Apple Silicon Mac on macOS 26 or later, Xcode 26 or later (built here with Xcode 27.2),
 XcodeGen and Rust. The grammar checker is built from source (about 2 minutes) and the project
@@ -49,7 +84,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh   # Rust, for the
 git clone https://github.com/kienmai160598/gotiengviet.git && cd gotiengviet
 ```
 
-### Mac input method
+### Mac input method from source
 
 ```sh
 Tools/install-mac.sh          # builds the grammar checker, then VietKey (Release), into ~/Library/Input Methods
@@ -90,6 +125,21 @@ which logs keystrokes (see Trace in `Apps/Shared`); do not use it for daily typi
 5. On the iPhone: Settings > General > Keyboard > Keyboards > Add New Keyboard > VietKey. Turn
    on Allow Full Access only for the key ticks (see Touches below). In a text field, hold the
    globe key and pick VietKey.
+
+### Publishing a Mac release
+
+```sh
+Tools/package-mac.sh     # Release build only, packed as .build/VietKey.zip, signature checked
+git push origin main     # first, so the tag lands on the commit that was built
+gh release create v0.1.0 .build/VietKey.zip --title "VietKey 0.1.0 (Mac)" \
+  --notes "Apple Silicon, macOS 26+. Signed ad hoc, not notarized."
+```
+
+Keep the asset name `VietKey.zip` and do not mark the release as a pre-release: `install.sh`
+downloads `releases/latest/download/VietKey.zip`, and GitHub's latest release skips
+pre-releases and drafts. The script never packs the installed app, which may be a Debug build
+that logs keystrokes. `Tools/build-grammar.sh` maps the home folder out of the Rust source
+paths, so the binary does not carry the builder's user name (checked with `strings`, 2026-11-12).
 
 ## Learning from corrections
 
@@ -143,7 +193,7 @@ Status: PoC. UI tests pass in the simulator on iPhone 17 Pro (iOS 26.5) and iPho
 (iOS 27.0), 2026-11-11. Used by hand on an iPhone 14 Pro Max (iOS 27.2.1) in Messages and the
 Claude app, 2026-11-12, for layout and look; the Telex results there are not checked against a
 list. Memory is measured in the simulator only (see the emoji page below); the limit iOS puts
-on a keyboard extension on a device is not. Not tried in Notes or Safari. Install: see above.
+on a keyboard extension on a device is not. Not tried in Notes or Safari. Install: see "Build from source".
 
 A custom keyboard (QWERTY, Telex) that types through the same Core `InputSession` as the Mac,
 so words are decided Vietnamese or English the same way, and Backspace right after a boundary
@@ -282,7 +332,8 @@ xcrun simctl shutdown <device> && xcrun simctl boot <device>
 - `Apps/iOS/`, `Apps/iOSKeyboard/`, `Apps/iOSUITests/`: container app, keyboard extension, UI tests.
 - `Apps/Shared/`: shared by the Mac app and the keyboard (models, debug trace).
 - `Grammar/`: Rust crate + Swift Package `VietKeyGrammar`, English grammar checking (Harper).
-- `Tools/`: install script, icon generator, frequency table generator, grammar build script.
+- `install.sh`: the one-line Mac installer (downloads the latest release).
+- `Tools/`: build-and-install and release packing scripts, icon generator, frequency table generator, grammar build script.
 
 ## Commands
 
@@ -290,10 +341,11 @@ xcrun simctl shutdown <device> && xcrun simctl boot <device>
 cd Core && swift test                                                     # Core tests
 xcodebuild -scheme VietKeyCore -destination 'generic/platform=iOS' build  # Core builds for iOS (run in Core/)
 Tools/install-mac.sh                                                      # build + install the Mac input method
+Tools/package-mac.sh                                                      # Release build packed as .build/VietKey.zip
 Tools/build-grammar.sh && (cd Grammar && swift test)                      # grammar xcframework + tests (needs cargo)
 xcodegen generate && xcodebuild test -project VietKey.xcodeproj -scheme VietKeyiOS \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro'               # iOS keyboard UI tests
-# iPhone install: see "Install on a new Mac"
+# iPhone install: see "Build from source"
 # Tatoeba eval: put vie.tsv and eng.tsv from downloads.tatoeba.org/exports/per_language in a folder
 cd Core && VIETKEY_TATOEBA_DIR=/path swift test -c release -Xswiftc -enable-testing --filter SentenceEval
 ```

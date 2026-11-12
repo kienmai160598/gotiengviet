@@ -10,6 +10,9 @@ LIB="target/$TARGET/release/libvietkey_grammar.a"
 GENERATED="target/uniffi"
 FRAMEWORK="build/VietKeyGrammarFFI.xcframework"
 
+# Panic messages embed source paths; keep the builder's home folder out of the shipped binary.
+# (The encoded form takes a single flag as is, so a home path with spaces still works.)
+export CARGO_ENCODED_RUSTFLAGS="--remap-path-prefix=$HOME=~"
 cargo build --release --locked --target "$TARGET" --lib --bin uniffi-bindgen-swift
 
 rm -rf "$GENERATED" "$FRAMEWORK"
