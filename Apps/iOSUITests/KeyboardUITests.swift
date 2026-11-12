@@ -1,7 +1,7 @@
 import XCTest
 
 /// Types on the real keyboard in the simulator, through the document proxy. Needs VietKey
-/// to be the simulator's first keyboard (see README).
+/// to be the simulator's first keyboard (see docs/NOTES.md).
 final class KeyboardUITests: XCTestCase {
     private var app: XCUIApplication!
     private var field: XCUIElement { app.textViews.firstMatch.exists ? app.textViews.firstMatch : app.textFields.firstMatch }
