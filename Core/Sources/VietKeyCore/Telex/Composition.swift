@@ -74,7 +74,8 @@ struct Composition: Equatable, Sendable {
     }
 
     /// Removes the last visible letter. The tone stays while a vowel remains.
-    /// Raw keys are rebuilt from the remaining letters, since modifier keys no longer map cleanly.
+    /// Raw keys become the Telex keys of what is left ("tôi" less i gives "too", not "to"):
+    /// modifier keys no longer map cleanly to letters, and the keys must still spell the word.
     mutating func deleteBackward() {
         guard !letters.isEmpty else { return }
         letters.removeLast()
@@ -82,8 +83,16 @@ struct Composition: Equatable, Sendable {
             self = Composition(style: style)
             return
         }
-        rawKeys = letters.map(\.key)
         if !hasVowel { tone = .level }
+        let isAllCaps = letters.allSatisfy { $0.key.isUppercase || !$0.key.isLetter }
+        let toneKey = tone.telexKey.map { isAllCaps ? $0.uppercased() : String($0) } ?? ""
+        rawKeys = Array(letters.map(Self.keys(for:)).joined() + toneKey)
+    }
+
+    /// "ô" typed as "O" gives "OO".
+    private static func keys(for letter: Letter) -> String {
+        let keys = Alphabet.telexKeys(for: letter.char)
+        return letter.key.isUppercase ? keys.uppercased() : keys
     }
 
     mutating func append(_ char: Character, key: Character) {

@@ -13,6 +13,11 @@ public enum CompositionUpdate: Sendable, Equatable {
     /// `expected`, replace it with `replacement` and consume the key. If the adapter cannot
     /// verify or replace that text, it must treat the key as `passthrough`.
     case revert(expected: String, replacement: String)
+    /// Backspace right after a word's boundary: if the text right before the caret is exactly
+    /// `expected` (the word and its boundary), remove it, show `display` as composing text, and
+    /// call `confirmResume()`. If the adapter cannot verify or remove that text, it must treat
+    /// the key as `passthrough`.
+    case resume(expected: String, display: String, raw: String)
     /// Not handled by the input method; the app should process the key itself.
     case passthrough
 }

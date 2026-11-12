@@ -5,11 +5,15 @@ private func type(_ keys: String, into session: inout InputSession) -> Compositi
     keys.reduce(nil) { _, char in session.handle(.character(char)) }
 }
 
-private func commitWord(_ keys: String) -> String? {
-    var session = InputSession(lexicon: TestLexicon(), frequencies: testFrequencies, corrections: InMemoryCorrectionStore())
+private func commitWord(_ keys: String, lexicon: any EnglishLexicon = TestLexicon()) -> String? {
+    var session = InputSession(lexicon: lexicon, frequencies: testFrequencies, corrections: InMemoryCorrectionStore())
     _ = type(keys, into: &session)
     guard case .commit(let text, _) = session.handle(.character(" ")) else { return nil }
     return text
+}
+
+private struct EveryWordLexicon: EnglishLexicon {
+    func contains(_ word: String) -> Bool { true }
 }
 
 struct InputSessionTests {
@@ -41,6 +45,19 @@ struct InputSessionTests {
     @Test(arguments: ["class", "press", "error", "coffee", "boss", "miss", "CLASS"])
     func doubleLettersInEnglishKeepRawWhenRawIsAWord(keys: String) {
         #expect(commitWord(keys) == keys)
+    }
+
+    /// "uw" then a plain o completes to ươ, as OpenKey does; a lone w before o stays "two".
+    @Test(arguments: [("tuwong", "tương"), ("nguwoif", "người"), ("dduwongf", "đường"), ("two", "two"), ("Two", "Two")])
+    func completesTheHornOfUwo(keys: String, word: String) {
+        #expect(commitWord(keys) == word)
+    }
+
+    /// "aaa" and "ww" are no English words, even to a spell checker that accepts them as the
+    /// Mac's does, so the double-key undo stands.
+    @Test(arguments: [("ww", "w"), ("aaa", "aa"), ("ddd", "dd"), ("ooo", "oo"), ("eee", "ee"), ("class", "class")])
+    func doubleKeyUndoBeatsRepeatedLetters(keys: String, word: String) {
+        #expect(commitWord(keys, lexicon: EveryWordLexicon()) == word)
     }
 
     /// Ratchet: English words whose Telex reading is a real, common syllable still come out

@@ -4,7 +4,8 @@
 Source: FrequencyWords by Hermit Dave (OpenSubtitles 2018), CC BY-SA 4.0, pinned to one
 commit so the tables can be rebuilt byte for byte. Output lines are "<keys> <per billion>":
 - english.txt: every lowercase a-z word. Marks apply anywhere in a word ("element" has e...e),
-  so any word can collide with Telex and the table doubles as the English word list.
+  so any word can collide with Telex and the table doubles as the English word list. One
+  letter repeated ("aaa", "mmm", "ww") is subtitle noise, left out so Telex double keys stand.
 - vietnamese.txt: syllables with a diacritic, keyed by their Telex keys with the tone key
   last, so "hòa" and "hoà" count as one entry.
 Usage: Tools/make-frequency-tables.py
@@ -55,7 +56,7 @@ def write(name, table):
 
 def main():
     english = {word: count for word, count in download("en")
-               if re.fullmatch(r"[a-z]+", word)}
+               if re.fullmatch(r"[a-z]+", word) and not re.fullmatch(r"(.)\1+", word)}
     vietnamese = defaultdict(int)
     for word, count in download("vi"):
         keys = telex_keys(word)

@@ -17,14 +17,10 @@ struct RevertTests {
         #expect(session.handle(.backspace) == .revert(expected: keys + String(boundary), replacement: shown))
     }
 
-    @Test(arguments: [
-        "vieetj",  // Vietnamese committed as shown
-        "tesst",   // double-key undo: committed as shown
-        "google",  // raw keys were already on screen
-        "thuowr",  // only the spelling changed (thưở to thuở)
-    ])
-    func backspaceDeletesNormallyWhenTheBoundaryChangedNothingVisible(keys: String) {
-        var session = session(afterTyping: keys + " ")
+    /// Only the spelling changed (thưở to thuở): nothing to bring back, and the word did not go
+    /// in as shown, so it is not reopened either.
+    @Test func backspaceDeletesNormallyWhenOnlyTheSpellingChanged() {
+        var session = session(afterTyping: "thuowr ")
         #expect(session.handle(.backspace) == .passthrough)
     }
 

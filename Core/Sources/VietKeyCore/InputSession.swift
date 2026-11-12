@@ -7,6 +7,7 @@ public struct InputSession: Sendable {
     private let frequencies: any WordFrequencies
     private let corrections: any CorrectionStore
     private var reverts = RevertTracker()
+    private var resumes = ResumeTracker()
     private var context = LanguageContext()
 
     public init(
@@ -27,6 +28,7 @@ public struct InputSession: Sendable {
 
     public mutating func handle(_ key: InputKey) -> CompositionUpdate {
         let (revert, keptRevert) = reverts.take(for: key)
+        let resume = resumes.take(for: key)
         if let keptRevert {
             corrections.record(.vietnamese, for: keptRevert.keys)
             context.userChoseVietnamese()
@@ -39,16 +41,15 @@ public struct InputSession: Sendable {
             return finishWord(boundary: boundary)
         case .backspace:
             guard isComposing else {
-                return revert.map { .revert(expected: $0.inserted, replacement: $0.shown) } ?? .passthrough
+                return revert.map { .revert(expected: $0.inserted, replacement: $0.shown) }
+                    ?? resume.map { .resume(expected: $0.inserted, display: $0.shown, raw: $0.composition.raw) } ?? .passthrough
             }
             deleteBackward()
             return composingUpdate
         case .escape:
             guard isComposing else { return .passthrough }
             let raw = composition.raw
-            if resolve(composition, isFinal: false) != raw {
-                corrections.record(.typedKeys, for: raw)
-            }
+            if resolve(composition, isFinal: false) != raw { corrections.record(.typedKeys, for: raw) }
             context.userChoseTypedKeys()
             reset()
             return .commit(text: raw, raw: raw)
@@ -59,7 +60,17 @@ public struct InputSession: Sendable {
     /// caret jump. Nothing typed afterwards can revert it.
     public mutating func commit() -> CompositionUpdate {
         reverts.cancelOffer()
+        resumes.cancelOffer()
         return finishWord(boundary: nil)
+    }
+
+    /// Forgets the word being typed because the user picked a marked Vietnamese word in its
+    /// place, which counts as Vietnamese for the words that follow.
+    public mutating func replaceWithVietnamese() {
+        reverts.cancelOffer()
+        resumes.cancelOffer()
+        context.userChoseVietnamese()
+        reset()
     }
 
     /// Call after the adapter applied a `.revert`. Unless the next key is another Backspace,
@@ -68,15 +79,24 @@ public struct InputSession: Sendable {
         reverts.confirm()
     }
 
-    /// Commits the word. When the shown Vietnamese gave way to the raw keys ("Đắk" became
-    /// "DDawks"), Backspace right after the boundary brings back what was shown.
+    /// Call after the adapter applied a `.resume`: the word is being typed again.
+    public mutating func confirmResume() {
+        guard let resume = resumes.confirm() else { return }
+        composition = resume.composition
+        context = resume.context
+    }
+
+    /// Commits the word. Backspace right after the boundary brings back the Vietnamese shown if
+    /// the raw keys replaced it ("Đắk" became "DDawks"), or else reopens the word as shown.
     private mutating func finishWord(boundary: Character?) -> CompositionUpdate {
         guard isComposing else { return .passthrough }
         let raw = composition.raw
         let text = resolve(composition, isFinal: true)
-        let wasShowingVietnamese = resolve(composition, isFinal: false) != raw
-        if let boundary, wasShowingVietnamese, text == raw {
+        let shown = resolve(composition, isFinal: false)
+        if let boundary, shown != raw, text == raw {
             reverts.offer(Revertible(keys: raw, inserted: text + String(boundary), shown: composition.spelledText))
+        } else if let boundary, text == shown {
+            resumes.offer(Resumable(composition: composition, context: context, shown: shown, inserted: text + String(boundary)))
         }
         context.record(committed: text, from: composition, englishFrequency: frequencies.english(raw.lowercased()))
         reset()
@@ -101,7 +121,7 @@ public struct InputSession: Sendable {
         case .vietnamese: return display
         case nil: break
         }
-        if composition.isLiteral { return isEnglishWord(raw) ? raw : display }
+        if composition.isLiteral { return lexicon.isEnglishWord(raw, frequencies: frequencies) ? raw : display }
         let isVietnamese = isFinal
             ? composition.isValidVietnamese && frequencies.prefersVietnamese(composition, after: context)
             : composition.canBecomeVietnamese
@@ -118,14 +138,6 @@ public struct InputSession: Sendable {
         } else {
             composition.deleteBackward()
         }
-    }
-
-    /// Checks the frequency table first, then the spell checker. Spell checkers accept any
-    /// all-caps string as an acronym, so "CASSE" is judged as "casse".
-    private func isEnglishWord(_ word: String) -> Bool {
-        if frequencies.english(word.lowercased()) > 0 { return true }
-        let isAllCaps = word == word.uppercased() && word != word.lowercased()
-        return lexicon.contains(isAllCaps ? word.lowercased() : word)
     }
 
     private var composingUpdate: CompositionUpdate {

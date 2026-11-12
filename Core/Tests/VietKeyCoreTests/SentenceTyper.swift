@@ -54,7 +54,7 @@ enum SentenceTyper {
         switch update {
         case .commit(let text, _): return text + (key?.isLetter == false ? passed : "")
         case .passthrough: return passed
-        case .composing, .revert: return ""
+        case .composing, .revert, .resume: return ""
         }
     }
 

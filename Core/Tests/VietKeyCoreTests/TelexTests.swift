@@ -41,6 +41,6 @@ struct TelexTests {
         "tieengs".forEach { composition.type($0) }
         composition.deleteBackward()
         #expect(composition.text == "tiến")
-        #expect(composition.raw == "tien")
+        #expect(composition.raw == "tieens")
     }
 }

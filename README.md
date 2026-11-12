@@ -11,6 +11,11 @@ like the, anh do not count), so "Team bên em" and "Ok, cả nhà" stay Vietname
 cả" gives car (chosen over a longer run so English right after Vietnamese works). Esc counts as English; a kept
 Backspace revert counts as Vietnamese. Context is never reset (not on Return either).
 While typing, the Vietnamese reading is shown as long as it is still possible.
+Compared with OpenKey's engine (EVKey's source is not public), 2026-11-12: "uw" then a plain o
+completes ươ (`tuwong` gives tương; a lone w stays, so "two" stays English); one letter
+repeated ("ww", "aaa") is never an English word, so the double-key undo stands even where the
+Mac spell checker accepts it; Backspace inside a word leaves the keys of what is still shown
+("tôi" less i is "too", judged like typing "too", where it used to be "to").
 Mac: context rule and the double-key undo fix (Canada, element) checked by hand 2026-11-11.
 
 Word error rate on Tatoeba running text (tone key typed last, test word list instead of the
@@ -77,10 +82,150 @@ untested). "Mr. Smith" or "e.g. this" end a sentence early. A chat message sent 
 the last key is not checked. Apps that do not expose their text
 to input methods (likely Chrome and Electron) get no suggestions.
 
+## iOS and iPadOS keyboard
+
+Status: PoC. UI tests pass in the simulator on iPhone 17 Pro (iOS 26.5) and iPhone 18 Pro Max
+(iOS 27.0), 2026-11-11. Installed on an iPhone 14 Pro Max (iOS 27.2.1) but not yet checked
+there by hand. Memory is measured in the simulator only (see the emoji page below); the limit
+iOS puts on a keyboard extension on a device is not. Tested only in the container app's text
+field, not in Notes, Messages or Safari.
+
+A custom keyboard (QWERTY, Telex) that types through the same Core `InputSession` as the Mac,
+so words are decided Vietnamese or English the same way, and Backspace right after a boundary
+restores the shown Vietnamese or reopens the word (`hoa ` Delete `f` gives "hòa"). The word being typed is marked text; committing it with
+`insertText` replaces the marked text. (Marking the final text and then unmarking it made the
+text field put the next character before the word.) Capitals at a sentence start when the
+field asks for them; double tap Shift for caps lock.
+
+Mid-word: hiding the keyboard commits the word. When the app changes the text while a word is
+being typed (a chat app sends and clears it), the word is dropped so the next key does not
+bring it back; edits reported within 250 ms of a key are taken as the keyboard's own echo.
+That path is covered by a Core test only. A tap in the field while a word is marked does not
+move the caret in the simulator, so typing goes on.
+
+The look follows the system keyboard, measured from simulator screenshots: key colours, sizes
+and gaps, 54-point rows on the smaller phones and 56 on Plus and Pro Max (40 in landscape,
+measured on the Pro Max only), the letter balloon
+on press (iPhone), Delete repeat while held, number and symbol pages, and Return named after
+the field's action ("Send", "Search").
+
+Lowercase letters are centred on their x-height, capitals on their cap height. Liquid Glass
+key faces were tried (2026-11-12) and dropped at the user's request; the faces stay solid.
+
+Touches:
+
+- A tap in the gap between two key faces, or in the strip between an outer key and the screen
+  edge, types the nearest key. Before, those taps were lost: in the iOS 26.5 simulator a
+  keyboard extension is given no touch that lands on a clear pixel, and the gaps are about a
+  third of the keys' area. The keyboard now has a background too faint to see. Covered by a
+  UI test; not confirmed on a device.
+- Two thumbs overlapping type in the order they touched (`KeyRollover`): a finger landing on
+  any key first types the key still held. Keys type on lift, so before, "n" down, "j" down,
+  "j" up, "n" up typed "jn". Unit tested only: a UI test cannot overlap two touches.
+- Each key ticks as it goes down (`UIImpactFeedbackGenerator`, light). Delete ticks on every
+  repeat while there is text before the caret, a selection or a word being typed; held on an
+  empty field it stays quiet (checked in the simulator by logging the decision).
+  Felt on an iPhone 14 Pro Max (iOS 27.2.1), 2026-11-12: nothing at first, then it worked
+  after turning on Full Access, reopening the keyboard and checking System Haptics; which of
+  the three it needed was not isolated. Custom keyboards are widely reported to need Full
+  Access for haptics; Apple's pages on open access do not say so. `RequestsOpenAccess` is on so that the switch exists in Settings
+  (Keyboards, VietKey, Allow Full Access). Turning it on gives up the system's guarantee that
+  keystrokes cannot leave the keyboard, and iOS warns about that; VietKey has no network
+  code. There is no setting to turn the tick off, and it does not follow the system's
+  Keyboard Feedback setting, which an app cannot read.
+- Work per key, Debug simulator, typing "vieetj nam ": 1.7 ms inside the key handler, before
+  and after. The keys were also relabelled, all of them, 26 times for those 11 keys (about
+  0.65 ms each); now 3 times, changing only the keys that differ. The bar no longer fades
+  its words in on every key.
+- A system gesture recognizer on the keyboard's window has `delaysTouchesBegan` set. In the
+  simulator a touch reaches its key about 1 ms after it happened, at the edges as in the
+  middle, with the flag on or off, so it is left alone; whether the outer keys feel late on
+  a device is not checked.
+- Shift between sentences: one tap capitalises the next letter, a double tap locks capitals.
+  Before, a tap anywhere but at a sentence start was undone at once.
+
+The bar is 30 points tall, not the 46 the simulator's system keyboard suggests. On an iPhone
+(iOS 27.2.1, in Messages and the Claude app) iOS puts about 16 points of its own glass above
+a custom keyboard, which the keyboard cannot draw into. Measured from screenshots:
+with a 46-point bar the keys sat 69 points below the top of the glass, with 30 they sit
+53, against 52 for the system keyboard. Developers
+report the same strip since iOS 26 in apps that use Liquid Glass, with no reply from Apple
+and no API to control it ([forum](https://developer.apple.com/forums/thread/800838)). The strip
+comes and goes on its own: in VietKey's own app (iPhone 17 Pro Max simulator, iOS 26.5,
+2026-11-12) it is missing when the keyboard first opens and there, about 17 points, after
+going to the home screen and back. The keyboard's view keeps the height it asked for in both
+cases (254.67 points). The keyboard cannot see the strip: its window is exactly its own height,
+with no offset or safe area, so the strip is drawn by the app's process. So the space above the
+bar looks thicker or thinner from app to app and moment to moment, and the keys stay put; this
+is left as it is. So the emoji and words stay mid-bar: under the strip they sit 31 points below
+the top of the glass against 26 for the system's predictions. Lifting them to 27 put them
+against the top edge in VietKey's own app (tried 2026-11-12). Over the top row the letter balloon is cut short by the top of the
+keyboard, so its letter is drawn smaller. The bar and keys are laid out from the bottom: while
+the keyboard opens, iOS can make the view taller for a moment (444 and 874 points for 244 asked,
+simulator log 2026-11-12), and laid out from the top they jumped up.
+
+The bar above the keys:
+
+- Between words it is a row of eight emoji. A placeholder until there is a better use for
+  the room: the list is fixed, nothing counts which emoji are used.
+- While a word is typed it has three slots like the iOS predictions, offering the word with
+  its marks: typing "toi" offers "tôi", "tới", "tối", and a tap puts the word and a space,
+  which saves the mark keys. Words come from the bundled frequency table (real syllables
+  only). Order, untuned: words that keep the marks already typed ("tôi" gives "tối" before
+  "tới"), then words with exactly the letters typed before longer ones ("ng" offers
+  "người"), then the most common. A chosen word counts as Vietnamese for the VN/EN decision
+  on the words after it.
+- The left slot shows the keys as typed, in quotes, when the word shows something else
+  (typing "car" shows "cả"; choosing "car" keeps it and teaches the keyboard).
+- No Vietnamese word starts with the letters ("hel"): the emoji show. There are no English
+  completions and no next-word prediction. Words without any mark ("con", "anh") are not in
+  the table, so they are never offered.
+
+The emoji key, left of the space bar, opens VietKey's own emoji page: a keyboard extension
+cannot open the system's (`UIInputViewController` only offers switching to the next keyboard).
+1,906 emoji from Unicode's Emoji 16.0 list (`Tools/make-emoji-table.py`,
+`Apps/iOSKeyboard/Emoji/LICENSE.md`) in nine groups, in one grid that scrolls down, with a
+strip of group tabs between "ABC" and Delete. No recents, skin tones or search.
+
+Memory, iPhone 17 Pro simulator, Debug build: the keyboard process uses 42 MB before the page
+is opened and 132 MB after scrolling through every group, about 50 KB for each emoji drawn.
+Smaller glyphs and a lower scale did not change that. Closing the page, which drops its
+views, gave back about 14 MB. (Each number is from its own trial build; the combination that
+ships was not measured again.) So `EmojiBudget` stops drawing new emoji once fewer than 16 MB
+are left before the process's limit (`os_proc_available_memory`); their cells stay blank and
+do nothing, while emoji drawn earlier keep working. The 16 MB is a guess, and the guard has
+only run in unit tests: the simulator reports 0, which means no limit, and nothing has been
+measured on a device. The header says 0 is also what a process that "is not an app" gets; if
+that covers a keyboard extension on a device, the guard never trips there.
+
+The frequency tables load off the main thread (about 160 ms in a Debug simulator build), so
+the keys show before they are ready; keys typed meanwhile wait. On the simulator the extension
+process itself still takes about 2 seconds to launch the first time, before any VietKey code
+runs.
+
+Not yet: the iPad layout (iPadOS has its own: Tab, caps lock, two Shift keys, flick down for
+numbers, a hide key; VietKey shows the iPhone layout stretched, under the system's own
+shortcut bar), long press for accents, grammar, expanding abbreviations in the bar
+("ko" to "không", planned next). The system spell
+checker (`UITextChecker`, used only after a double-key undo) is not exercised by any test yet.
+Corrections stay in the keyboard process (no App Group). Apple does not let custom keyboards
+type in secure or phone number fields.
+
+The UI tests type on the real keyboard in the simulator. Make VietKey the simulator's first
+keyboard once, then reboot that simulator:
+
+```sh
+xcrun simctl spawn <device> defaults write .GlobalPreferences AppleKeyboards -array dev.vietkey.ios.keyboard "en_US@sw=QWERTY;hw=Automatic"
+xcrun simctl spawn <device> defaults write .GlobalPreferences AppleKeyboardsExpanded -int 1
+xcrun simctl shutdown <device> && xcrun simctl boot <device>
+```
+
 ## Layout
 
 - `Core/`: Swift Package `VietKeyCore`, no AppKit/UIKit. Telex engine, syllable model, `InputSession`.
 - `Apps/macOS/`: InputMethodKit adapter (`VietKeyInputController`).
+- `Apps/iOS/`, `Apps/iOSKeyboard/`, `Apps/iOSUITests/`: container app, keyboard extension, UI tests.
+- `Apps/Shared/`: shared by the Mac app and the keyboard (models, debug trace).
 - `Grammar/`: Rust crate + Swift Package `VietKeyGrammar`, English grammar checking (Harper).
 - `Tools/`: install script, icon generator, frequency table generator, grammar build script.
 
@@ -91,6 +236,12 @@ cd Core && swift test                                                     # Core
 xcodebuild -scheme VietKeyCore -destination 'generic/platform=iOS' build  # Core builds for iOS (run in Core/)
 Tools/install-mac.sh                                                      # build + install the Mac input method
 Tools/build-grammar.sh && (cd Grammar && swift test)                      # grammar xcframework + tests (needs cargo)
+xcodegen generate && xcodebuild test -project VietKey.xcodeproj -scheme VietKeyiOS \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro'               # iOS keyboard UI tests
+# Device: put DEVELOPMENT_TEAM = <team ID> in Config/Signing.local.xcconfig (gitignored)
+xcodebuild -scheme VietKeyiOS -configuration Release -destination 'id=<device>' \
+  -derivedDataPath .build/ios-device -allowProvisioningUpdates build &&
+  xcrun devicectl device install app --device <device> .build/ios-device/Build/Products/Release-iphoneos/VietKey.app
 # Tatoeba eval: put vie.tsv and eng.tsv from downloads.tatoeba.org/exports/per_language in a folder
 cd Core && VIETKEY_TATOEBA_DIR=/path swift test -c release -Xswiftc -enable-testing --filter SentenceEval
 ```
@@ -113,3 +264,8 @@ expose and replace text before the caret.
 | TextEdit | works | 2026-11-11, manual |
 | Terminal | disabled on purpose: Backspace deletes the space | 2026-11-11, manual |
 | Safari, Chrome, Cursor/VS Code | not tested yet | |
+
+Otherwise Backspace right after a boundary reopens the word that went in as shown, so a tone
+can still be added (`hoa ` then Backspace then `f` gives "hòa", as in OpenKey): the word and
+its boundary become marked text again. Same checks as the revert, Terminal excluded. Covered by
+Core tests, an iOS simulator UI test and an NSTextView probe; not yet checked by hand in apps.

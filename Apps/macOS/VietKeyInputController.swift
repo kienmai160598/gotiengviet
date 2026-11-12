@@ -100,6 +100,10 @@ final class VietKeyInputController: IMKInputController {
             let replaced = TextReplacer.replace(expected, with: replacement, in: client)
             if replaced { session.confirmRevert() }
             return replaced
+        case .resume(let expected, let display, _):
+            let reopened = TextReplacer.mark(expected, as: display, in: client)
+            if reopened { session.confirmResume() }
+            return reopened
         case .passthrough:
             return false
         }

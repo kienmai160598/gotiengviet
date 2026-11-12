@@ -9,3 +9,5 @@ DerivedData/
 Grammar/target/
 Grammar/build/
 Grammar/Sources/VietKeyGrammar/vietkey_grammar.swift
+# Personal signing team for iOS, see Config/iOS.xcconfig
+Config/Signing.local.xcconfig

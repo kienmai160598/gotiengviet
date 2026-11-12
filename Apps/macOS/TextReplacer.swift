@@ -1,9 +1,9 @@
 import Foundation
 import InputMethodKit
 
-/// Replaces text the app has already inserted, for Backspace-to-revert and grammar fixes. Only
-/// acts when the app proves the exact text is where it is expected, so a failure leaves the
-/// document untouched instead of corrupting it.
+/// Replaces text the app has already inserted, for Backspace-to-revert, reopening a word and
+/// grammar fixes. Only acts when the app proves the exact text is where it is expected, so a
+/// failure leaves the document untouched instead of corrupting it.
 enum TextReplacer {
     /// Terminals hand typed text to the shell at once; it cannot be edited afterwards.
     private static let unsupportedClients: Set<String> = ["com.apple.Terminal"]
@@ -15,6 +15,17 @@ enum TextReplacer {
         client.insertText(replacement, replacementRange: range)
         let written = NSRange(location: range.location, length: replacement.utf16.count)
         Trace.log("  revert verified=\(read(written, from: client) == replacement)")
+        return true
+    }
+
+    /// Turns `expected`, right before the caret, back into marked text showing `display`.
+    static func mark(_ expected: String, as display: String, in client: IMKTextInput) -> Bool {
+        guard !unsupportedClients.contains(client.bundleIdentifier() ?? ""),
+              let range = rangeBeforeCaret(matching: expected, in: client)
+        else { return false }
+        let caret = NSRange(location: display.utf16.count, length: 0)
+        client.setMarkedText(display, selectionRange: caret, replacementRange: range)
+        Trace.log("  reopen marked=\(client.markedRange()) selected=\(client.selectedRange())")
         return true
     }
 

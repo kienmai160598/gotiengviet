@@ -6,7 +6,8 @@ extension Composition {
         if let newTone = Tone(telexKey: key) { return applyTone(newTone) }
         switch key {
         case "z": return removeTone()
-        case "a", "e", "o": return applyCircumflex(key)
+        case "o": return applyCircumflex(key) || completeHorn(key: original)
+        case "a", "e": return applyCircumflex(key)
         case "w": return applyHook(key: original)
         case "d": return applyStroke()
         default: return false
@@ -50,9 +51,19 @@ extension Composition {
         return true
     }
 
+    /// An o right after a ư typed as "uw" takes the horn too ("tuwong" gives "tương"), since
+    /// ưo is no Vietnamese vowel. A lone w (ư) is left alone, so "two" stays English.
+    private mutating func completeHorn(key: Character) -> Bool {
+        guard let last = letters.last, last.char == "ư", last.key.lowercased() == "u" else { return false }
+        append("ơ", key: key)
+        return true
+    }
+
     /// w adds a horn or breve: ươ first, then the first single change giving a real nucleus.
     /// With no vowel yet, w alone types ư.
     private mutating func applyHook(key: Character) -> Bool {
+        // In "uwow" the o already took the horn from "uw", so this w only confirms it.
+        if letters.last?.char == "ơ", rawKeys.dropLast().last?.lowercased() == "o" { return true }
         guard let run = vowelRun else {
             append("ư", key: key)
             return true

@@ -1,6 +1,6 @@
 import os
 
-/// Diagnostic trace for IMKit behaviour. Compiled only into Debug builds, so release builds
+/// Diagnostic trace for input method and keyboard behaviour. Compiled only into Debug builds, so release builds
 /// never log keystrokes. Read live with:
 /// log stream --level debug --predicate 'subsystem == "dev.vietkey.inputmethod"'
 enum Trace {

@@ -1,8 +1,7 @@
 import Foundation
 import Synchronization
 
-/// Persists corrections in UserDefaults (an App Group suite on iOS so the keyboard extension
-/// and its app share them). Reads come from an in-memory copy loaded once.
+/// Persists corrections in UserDefaults. Reads come from an in-memory copy loaded once.
 public final class UserDefaultsCorrectionStore: CorrectionStore {
     private static let key = "VietKey.corrections"
     /// Apple documents UserDefaults as thread-safe; the SDK just doesn't mark it Sendable.

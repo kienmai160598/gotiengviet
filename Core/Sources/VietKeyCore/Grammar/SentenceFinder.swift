@@ -22,6 +22,15 @@ public enum SentenceFinder {
         return (String(chars[start..<end]), offset)
     }
 
+    /// Whether the next letter starts a sentence, for automatic capitals: at the document start,
+    /// after a newline, or after a terminator and a space.
+    public static func startsSentence(after before: String?) -> Bool {
+        let text = before ?? ""
+        let trimmed = text.reversed().drop { $0 == " " }
+        guard let last = trimmed.first else { return true }
+        return last.isNewline || (trimmed.count < text.count && terminators.contains(last))
+    }
+
     /// A sentence starts after a newline, or after a terminator followed by whitespace, so
     /// "example.com" and "3.14" do not end one.
     private static func isBoundary(_ chars: [Character], at index: Int) -> Bool {

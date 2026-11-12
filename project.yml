@@ -3,6 +3,12 @@ options:
   bundleIdPrefix: dev.vietkey
   deploymentTarget:
     macOS: "26.0"
+    iOS: "26.0"
+settings:
+  base:
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "6.0"
 packages:
   VietKeyCore:
     path: Core
@@ -16,6 +22,7 @@ targets:
       - path: Apps/macOS
         excludes:
           - Info.plist
+      - path: Apps/Shared
     dependencies:
       - package: VietKeyCore
       - package: VietKeyGrammar
@@ -25,7 +32,61 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: dev.vietkey.inputmethod.VietKey
         INFOPLIST_FILE: Apps/macOS/Info.plist
         GENERATE_INFOPLIST_FILE: NO
-        SWIFT_VERSION: "6.0"
         CODE_SIGN_STYLE: Manual
         CODE_SIGN_IDENTITY: "-"
         ENABLE_HARDENED_RUNTIME: NO
+  VietKeyiOS:
+    type: application
+    platform: iOS
+    scheme:
+      testTargets:
+        - VietKeyiOSUITests
+    sources:
+      - path: Apps/iOS
+    dependencies:
+      - target: VietKeyKeyboard
+    configFiles:
+      Debug: Config/iOS.xcconfig
+      Release: Config/iOS.xcconfig
+    settings:
+      base:
+        PRODUCT_NAME: VietKey
+        PRODUCT_BUNDLE_IDENTIFIER: dev.vietkey.ios
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: VietKey
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
+        TARGETED_DEVICE_FAMILY: "1,2"
+  VietKeyKeyboard:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Apps/iOSKeyboard
+        excludes:
+          - Info.plist
+      - path: Apps/Shared
+    dependencies:
+      - package: VietKeyCore
+    configFiles:
+      Debug: Config/iOS.xcconfig
+      Release: Config/iOS.xcconfig
+    settings:
+      base:
+        PRODUCT_NAME: VietKeyKeyboard
+        PRODUCT_BUNDLE_IDENTIFIER: dev.vietkey.ios.keyboard
+        INFOPLIST_FILE: Apps/iOSKeyboard/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        TARGETED_DEVICE_FAMILY: "1,2"
+  VietKeyiOSUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: Apps/iOSUITests
+    dependencies:
+      - target: VietKeyiOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.vietkey.ios.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: VietKeyiOS
